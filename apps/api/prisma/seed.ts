@@ -45,6 +45,12 @@ const PERMISSIONS = [
   { name: 'storage:read', description: 'Read object metadata, get download URLs' },
   { name: 'storage:write', description: 'Upload, update metadata' },
   { name: 'storage:delete_any', description: 'Admin: delete any object' },
+
+  // Health data
+  { name: 'health_data:read', description: 'Read own health data' },
+  { name: 'health_data:write', description: 'Write own health data' },
+  { name: 'health_data:read_any', description: 'Admin: read any user health data' },
+  { name: 'health_data:delete', description: 'Delete own health data' },
 ] as const;
 
 // Role to permissions mapping
@@ -62,17 +68,25 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'storage:read',
     'storage:write',
     'storage:delete_any',
+    'health_data:read',
+    'health_data:write',
+    'health_data:read_any',
+    'health_data:delete',
   ],
   contributor: [
     'user_settings:read',
     'user_settings:write',
     'storage:read',
     'storage:write',
+    'health_data:read',
+    'health_data:write',
+    'health_data:delete',
   ],
   viewer: [
     'user_settings:read',
     'user_settings:write',
     'storage:read',
+    'health_data:read',
   ],
 };
 

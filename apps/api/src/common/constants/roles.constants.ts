@@ -38,6 +38,12 @@ export const PERMISSIONS = {
   STORAGE_READ: 'storage:read',
   STORAGE_WRITE: 'storage:write',
   STORAGE_DELETE_ANY: 'storage:delete_any',
+
+  // Health data
+  HEALTH_DATA_READ: 'health_data:read',
+  HEALTH_DATA_WRITE: 'health_data:write',
+  HEALTH_DATA_READ_ANY: 'health_data:read_any',
+  HEALTH_DATA_DELETE: 'health_data:delete',
 } as const;
 
 export type PermissionName = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
