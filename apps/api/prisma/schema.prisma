@@ -38,6 +38,28 @@ model User {
   deviceCodes               DeviceCode[]     @relation("UserDeviceCodes")
   storageObjects            StorageObject[]  @relation("UserStorageObjects")
 
+  // Health data relations
+  healthMetrics                 HealthMetric[]          @relation("UserHealthMetrics")
+  healthMetricsUpdated          HealthMetric[]          @relation("HealthMetricUpdater")
+  healthSleepSessions           HealthSleepSession[]    @relation("UserSleepSessions")
+  healthSleepSessionsUpdated    HealthSleepSession[]    @relation("SleepSessionUpdater")
+  healthExerciseSessions        HealthExerciseSession[] @relation("UserExerciseSessions")
+  healthExerciseSessionsUpdated HealthExerciseSession[] @relation("ExerciseSessionUpdater")
+  healthNutrition               HealthNutrition[]       @relation("UserNutrition")
+  healthNutritionUpdated        HealthNutrition[]       @relation("NutritionUpdater")
+  healthCycleEvents             HealthCycleEvent[]      @relation("UserCycleEvents")
+  healthCycleEventsUpdated      HealthCycleEvent[]      @relation("CycleEventUpdater")
+  healthLabResults              HealthLabResult[]        @relation("UserLabResults")
+  healthLabResultsUpdated       HealthLabResult[]        @relation("LabResultUpdater")
+  healthMoodScales              HealthMoodScale[]
+  healthSessions                HealthSession[]
+  healthRecordAttachments       HealthRecordAttachment[]
+  healthRecordComments          HealthRecordComment[]
+  devices                       UserDevice[]
+  healthDataSources             HealthDataSource[]
+  healthSyncStates              HealthSyncState[]
+  healthRecordRevisions         HealthRecordRevision[]
+
   @@map("users")
 }
 
@@ -261,8 +283,9 @@ model StorageObject {
   updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  uploadedBy User?                @relation("UserStorageObjects", fields: [uploadedById], references: [id], onDelete: SetNull)
-  chunks     StorageObjectChunk[]
+  uploadedBy              User?                    @relation("UserStorageObjects", fields: [uploadedById], references: [id], onDelete: SetNull)
+  chunks                  StorageObjectChunk[]
+  healthRecordAttachments HealthRecordAttachment[]
 
   @@index([uploadedById])
   @@index([status])
@@ -284,4 +307,474 @@ model StorageObjectChunk {
   @@unique([objectId, partNumber])
   @@index([objectId])
   @@map("storage_object_chunks")
+}
+
+// =============================================================================
+// Health Data - Enums
+// =============================================================================
+
+enum SourceType {
+  android_health_connect
+  manual
+  api
+  lab_upload
+}
+
+enum SyncStatus {
+  idle
+  syncing
+  error
+}
+
+// =============================================================================
+// Health Data - Devices & Sources
+// =============================================================================
+
+model UserDevice {
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  deviceName           String    @map("device_name")
+  deviceModel          String?   @map("device_model")
+  deviceManufacturer   String?   @map("device_manufacturer")
+  deviceOs             String?   @map("device_os")
+  deviceType           String?   @map("device_type")
+  appVersion           String?   @map("app_version")
+  isActive             Boolean   @default(true) @map("is_active")
+  lastSyncAt           DateTime? @map("last_sync_at") @db.Timestamptz
+  firstSeenAt          DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  healthMetrics     HealthMetric[]
+  healthSleepSessions    HealthSleepSession[]
+  healthExerciseSessions HealthExerciseSession[]
+  healthNutrition        HealthNutrition[]
+  healthCycleEvents      HealthCycleEvent[]
+  healthLabResults       HealthLabResult[]
+  healthDataSources      HealthDataSource[]
+  healthSyncStates       HealthSyncState[]
+
+  @@unique([userId, deviceName, deviceModel])
+  @@map("user_devices")
+}
+
+model HealthDataSource {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  sourceType  SourceType @map("source_type")
+  packageName String?    @map("package_name")
+  displayName String?    @map("display_name")
+  deviceId    String?    @map("device_id") @db.Uuid
+  firstSeenAt DateTime   @default(now()) @map("first_seen_at") @db.Timestamptz
+  lastSeenAt  DateTime   @map("last_seen_at") @db.Timestamptz
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, sourceType, packageName])
+  @@map("health_data_sources")
+}
+
+model HealthSyncState {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @map("user_id") @db.Uuid
+  deviceId        String     @map("device_id") @db.Uuid
+  dataType        String     @map("data_type")
+  changeToken     String?    @map("change_token")
+  lastSyncAt      DateTime?  @map("last_sync_at") @db.Timestamptz
+  lastRecordTime  DateTime?  @map("last_record_time") @db.Timestamptz
+  recordsSynced   BigInt     @default(0) @map("records_synced")
+  syncStatus      SyncStatus @default(idle) @map("sync_status")
+  errorMessage    String?    @map("error_message")
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device UserDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId, dataType])
+  @@map("health_sync_state")
+}
+
+// =============================================================================
+// Health Data - Core Metrics
+// =============================================================================
+
+model HealthMetric {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  timestamp       DateTime  @map("timestamp") @db.Timestamptz
+  endTime         DateTime? @map("end_time") @db.Timestamptz
+  metric          String
+  value           Float
+  unit            String
+  source          String?
+  groupId         String?   @map("group_id") @db.Uuid
+  tags            Json?     @db.JsonB
+  clientRecordId  String?   @map("client_record_id")
+  zoneOffset      String?   @map("zone_offset")
+  endZoneOffset   String?   @map("end_zone_offset")
+  dataOrigin      String?   @map("data_origin")
+  recordingMethod String?   @map("recording_method")
+  deviceType      String?   @map("device_type")
+  metadata        Json?     @db.JsonB
+  notes           String?
+  deviceId        String?   @map("device_id") @db.Uuid
+  version         Int       @default(1)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updateSource    String?   @map("update_source")
+  updateComment   String?   @map("update_comment")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User        @relation("UserHealthMetrics", fields: [userId], references: [id], onDelete: Cascade)
+  device        UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("HealthMetricUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  // Note: @@unique([userId, clientRecordId]) is intentionally a full unique index here.
+  // A partial unique index (WHERE client_record_id IS NOT NULL) should be created via
+  // raw SQL in the migration to replace this constraint for correct dedup behavior.
+  @@unique([userId, clientRecordId])
+  @@index([userId, metric, timestamp(sort: Desc)])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([userId, groupId])
+  @@index([userId, dataOrigin])
+  @@map("health_metrics")
+}
+
+// =============================================================================
+// Health Data - Sleep
+// =============================================================================
+
+model HealthSleepSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  startTime       DateTime  @map("start_time") @db.Timestamptz
+  endTime         DateTime  @map("end_time") @db.Timestamptz
+  durationMs      BigInt?   @map("duration_ms")
+  title           String?
+  notes           String?
+  source          String?
+  clientRecordId  String?   @map("client_record_id")
+  zoneOffset      String?   @map("zone_offset")
+  endZoneOffset   String?   @map("end_zone_offset")
+  dataOrigin      String?   @map("data_origin")
+  recordingMethod String?   @map("recording_method")
+  metadata        Json?     @db.JsonB
+  deviceId        String?   @map("device_id") @db.Uuid
+  version         Int       @default(1)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updateSource    String?   @map("update_source")
+  updateComment   String?   @map("update_comment")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User               @relation("UserSleepSessions", fields: [userId], references: [id], onDelete: Cascade)
+  stages        HealthSleepStage[]
+  device        UserDevice?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?              @relation("SleepSessionUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientRecordId])
+  @@index([userId, startTime(sort: Desc)])
+  @@map("health_sleep_sessions")
+}
+
+model HealthSleepStage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  stage     String
+  startTime DateTime @map("start_time") @db.Timestamptz
+  endTime   DateTime @map("end_time") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  session HealthSleepSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("health_sleep_stages")
+}
+
+// =============================================================================
+// Health Data - Exercise
+// =============================================================================
+
+model HealthExerciseSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  startTime       DateTime  @map("start_time") @db.Timestamptz
+  endTime         DateTime  @map("end_time") @db.Timestamptz
+  exerciseType    String    @map("exercise_type")
+  title           String?
+  isPlanned       Boolean   @default(false) @map("is_planned")
+  attributes      Json      @db.JsonB
+  source          String?
+  clientRecordId  String?   @map("client_record_id")
+  zoneOffset      String?   @map("zone_offset")
+  endZoneOffset   String?   @map("end_zone_offset")
+  dataOrigin      String?   @map("data_origin")
+  recordingMethod String?   @map("recording_method")
+  metadata        Json?     @db.JsonB
+  notes           String?
+  deviceId        String?   @map("device_id") @db.Uuid
+  version         Int       @default(1)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updateSource    String?   @map("update_source")
+  updateComment   String?   @map("update_comment")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User        @relation("UserExerciseSessions", fields: [userId], references: [id], onDelete: Cascade)
+  device        UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("ExerciseSessionUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientRecordId])
+  @@index([userId, exerciseType, startTime(sort: Desc)])
+  @@index([userId, startTime(sort: Desc)])
+  @@map("health_exercise_sessions")
+}
+
+// =============================================================================
+// Health Data - Nutrition
+// =============================================================================
+
+model HealthNutrition {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  startTime       DateTime  @map("start_time") @db.Timestamptz
+  endTime         DateTime  @map("end_time") @db.Timestamptz
+  mealType        String?   @map("meal_type")
+  name            String?
+  nutrients       Json      @db.JsonB
+  source          String?
+  clientRecordId  String?   @map("client_record_id")
+  zoneOffset      String?   @map("zone_offset")
+  endZoneOffset   String?   @map("end_zone_offset")
+  dataOrigin      String?   @map("data_origin")
+  recordingMethod String?   @map("recording_method")
+  metadata        Json?     @db.JsonB
+  deviceId        String?   @map("device_id") @db.Uuid
+  version         Int       @default(1)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updateSource    String?   @map("update_source")
+  updateComment   String?   @map("update_comment")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User        @relation("UserNutrition", fields: [userId], references: [id], onDelete: Cascade)
+  device        UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("NutritionUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientRecordId])
+  @@index([userId, mealType, startTime(sort: Desc)])
+  @@index([userId, startTime(sort: Desc)])
+  @@map("health_nutrition")
+}
+
+// =============================================================================
+// Health Data - Cycle Tracking
+// =============================================================================
+
+model HealthCycleEvent {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  timestamp       DateTime  @map("timestamp") @db.Timestamptz
+  endTime         DateTime? @map("end_time") @db.Timestamptz
+  eventType       String    @map("event_type")
+  data            Json      @db.JsonB
+  source          String?
+  clientRecordId  String?   @map("client_record_id")
+  zoneOffset      String?   @map("zone_offset")
+  endZoneOffset   String?   @map("end_zone_offset")
+  dataOrigin      String?   @map("data_origin")
+  recordingMethod String?   @map("recording_method")
+  metadata        Json?     @db.JsonB
+  deviceId        String?   @map("device_id") @db.Uuid
+  version         Int       @default(1)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updateSource    String?   @map("update_source")
+  updateComment   String?   @map("update_comment")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User        @relation("UserCycleEvents", fields: [userId], references: [id], onDelete: Cascade)
+  device        UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("CycleEventUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientRecordId])
+  @@index([userId, eventType, timestamp(sort: Desc)])
+  @@map("health_cycle_events")
+}
+
+// =============================================================================
+// Health Data - Lab Results
+// =============================================================================
+
+model HealthLabResult {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  timestamp        DateTime  @map("timestamp") @db.Timestamptz
+  testName         String    @map("test_name")
+  value            Float
+  unit             String
+  rangeLow         Float?    @map("range_low")
+  rangeHigh        Float?    @map("range_high")
+  status           String?
+  panelName        String?   @map("panel_name")
+  labName          String?   @map("lab_name")
+  orderingProvider String?   @map("ordering_provider")
+  notes            String?
+  source           String?
+  tags             Json?     @db.JsonB
+  deviceId         String?   @map("device_id") @db.Uuid
+  version          Int       @default(1)
+  updatedAt        DateTime? @map("updated_at") @db.Timestamptz
+  updatedByUserId  String?   @map("updated_by_user_id") @db.Uuid
+  updateSource     String?   @map("update_source")
+  updateComment    String?   @map("update_comment")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User        @relation("UserLabResults", fields: [userId], references: [id], onDelete: Cascade)
+  device        UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("LabResultUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, testName, timestamp(sort: Desc)])
+  @@index([userId, panelName, timestamp(sort: Desc)])
+  @@index([userId, timestamp(sort: Desc)])
+  @@map("health_lab_results")
+}
+
+// =============================================================================
+// Health Data - Mood & Subjective
+// =============================================================================
+
+model HealthMoodScale {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  scaleName String   @map("scale_name")
+  minValue  Int      @map("min_value")
+  maxValue  Int      @map("max_value")
+  labels    Json     @db.JsonB
+  icon      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scaleName])
+  @@map("health_mood_scales")
+}
+
+// =============================================================================
+// Health Data - Sessions (grouping/collections)
+// =============================================================================
+
+model HealthSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  name        String
+  description String?
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  status      String    @default("active")
+  tags        Json?     @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records HealthSessionRecord[]
+
+  @@index([userId, status])
+  @@index([userId, startDate(sort: Desc)])
+  @@map("health_sessions")
+}
+
+model HealthSessionRecord {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  tableName String   @map("table_name")
+  recordId  String   @map("record_id") @db.Uuid
+  addedAt   DateTime @default(now()) @map("added_at") @db.Timestamptz
+
+  // Relations
+  session HealthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, tableName, recordId])
+  @@index([sessionId])
+  @@index([tableName, recordId])
+  @@map("health_session_records")
+}
+
+// =============================================================================
+// Health Data - Attachments, Comments, Revisions
+// =============================================================================
+
+model HealthRecordAttachment {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  tableName       String   @map("table_name")
+  recordId        String   @map("record_id") @db.Uuid
+  storageObjectId String   @map("storage_object_id") @db.Uuid
+  caption         String?
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageObject StorageObject @relation(fields: [storageObjectId], references: [id], onDelete: Cascade)
+
+  @@unique([tableName, recordId, storageObjectId])
+  @@index([tableName, recordId])
+  @@index([userId])
+  @@map("health_record_attachments")
+}
+
+model HealthRecordComment {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tableName   String    @map("table_name")
+  recordId    String    @map("record_id") @db.Uuid
+  comment     String
+  commentType String    @default("note") @map("comment_type")
+  isPinned    Boolean   @default(false) @map("is_pinned")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tableName, recordId, createdAt])
+  @@index([userId])
+  @@map("health_record_comments")
+}
+
+model HealthRecordRevision {
+  id             String    @id @default(uuid()) @db.Uuid
+  tableName      String    @map("table_name")
+  recordId       String    @map("record_id") @db.Uuid
+  version        Int
+  previousData   Json      @map("previous_data") @db.JsonB
+  changedByUserId String?  @map("changed_by_user_id") @db.Uuid
+  changeSource   String    @map("change_source")
+  changeComment  String?   @map("change_comment")
+  changedAt      DateTime  @default(now()) @map("changed_at") @db.Timestamptz
+
+  // Relations
+  changedByUser User? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tableName, recordId, version])
+  @@index([changedByUserId, changedAt(sort: Desc)])
+  @@map("health_record_revisions")
 }
