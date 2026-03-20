@@ -24,6 +24,16 @@ Web Application Foundation with React UI + Node API + PostgreSQL. Production-gra
   apps/
     api/                    # Backend API
       src/
+        health-data/                # Health data module
+          health-data.module.ts
+          health-data.controller.ts
+          health-data.service.ts
+          health-data-sync.controller.ts
+          health-data-sync.service.ts
+          health-data-source.service.ts
+          devices.controller.ts
+          devices.service.ts
+          dto/
       test/
       prisma/
         schema.prisma
@@ -33,6 +43,22 @@ Web Application Foundation with React UI + Node API + PostgreSQL. Production-gra
       src/
       src/__tests__/
       Dockerfile            # Web container (near its code)
+  android/                          # Android app (Kotlin + Compose)
+    app/src/main/java/com/vitalmesh/app/
+      di/                           # Hilt modules
+      data/
+        local/db/                   # Room database
+        local/preferences/          # Token storage
+        remote/api/                 # Retrofit API interfaces
+        healthconnect/              # Health Connect integration
+        repository/                 # Data repositories
+      domain/model/                 # Domain models
+      sync/                         # SyncManager, SyncWorker
+      ui/
+        navigation/                 # Navigation graph
+        theme/                      # M3 theme
+        screens/                    # All screens
+        components/                 # Shared components
   docs/                     # Documentation
   infra/                    # Infrastructure configuration
     compose/
@@ -270,6 +296,59 @@ cd apps/api && npm run prisma:migrate
 - `GET /api/health/live` - Liveness check
 - `GET /api/health/ready` - Readiness check (includes DB)
 
+### Health Data Sync (Android App)
+- `POST /api/health-data/metrics` - Batch upsert time-series metrics (max 500)
+- `POST /api/health-data/sleep` - Batch upsert sleep sessions + stages
+- `POST /api/health-data/exercise` - Batch upsert exercise sessions
+- `POST /api/health-data/nutrition` - Batch upsert nutrition entries
+- `POST /api/health-data/cycle` - Batch upsert cycle tracking events
+- `POST /api/health-data/labs` - Batch upsert lab results
+- `GET /api/health-data/sync/state` - Get sync state per data type
+- `PUT /api/health-data/sync/state` - Update sync state
+
+### Health Data Query
+- `GET /api/health-data/metrics` - Query metrics (filterable, paginated)
+- `GET /api/health-data/metrics/grouped` - Query grouped metrics (e.g., BP pairs)
+- `GET /api/health-data/sleep` - Query sleep sessions with stages
+- `GET /api/health-data/exercise` - Query exercise sessions
+- `GET /api/health-data/nutrition` - Query nutrition entries
+- `GET /api/health-data/cycle` - Query cycle events
+- `GET /api/health-data/labs` - Query lab results
+- `GET /api/health-data/summary` - Aggregated dashboard data
+- `PATCH /api/health-data/:table/:id` - Update a health record
+- `GET /api/health-data/:table/:id/revisions` - Get revision history
+- `DELETE /api/health-data/metrics` - Delete metrics by metric + time range
+
+### Health Data - Mood Scales
+- `GET /api/health-data/mood-scales` - List mood scale definitions
+- `POST /api/health-data/mood-scales` - Create a mood scale
+- `PATCH /api/health-data/mood-scales/:id` - Update mood scale
+- `DELETE /api/health-data/mood-scales/:id` - Deactivate mood scale
+
+### Health Data - Sessions (Grouping)
+- `GET /api/health-data/sessions` - List sessions
+- `POST /api/health-data/sessions` - Create session
+- `GET /api/health-data/sessions/:id` - Get session with summary
+- `PATCH /api/health-data/sessions/:id` - Update session
+- `DELETE /api/health-data/sessions/:id` - Delete session
+- `GET /api/health-data/sessions/:id/records` - Get linked records
+- `POST /api/health-data/sessions/:id/records` - Link records
+- `DELETE /api/health-data/sessions/:id/records` - Unlink records
+
+### Health Data - Attachments & Comments
+- `GET /api/health-data/:table/:id/attachments` - List attachments
+- `POST /api/health-data/:table/:id/attachments` - Add attachment
+- `DELETE /api/health-data/attachments/:id` - Remove attachment
+- `GET /api/health-data/:table/:id/comments` - List comments
+- `POST /api/health-data/:table/:id/comments` - Add comment
+- `PATCH /api/health-data/comments/:id` - Update comment
+- `DELETE /api/health-data/comments/:id` - Delete comment
+
+### Devices
+- `GET /api/devices` - List user's devices
+- `PATCH /api/devices/:id` - Update device info
+- `DELETE /api/devices/:id` - Deactivate device
+
 ## RBAC Model
 
 ### Roles
@@ -285,6 +364,10 @@ cd apps/api && npm run prisma:migrate
 - `allowlist:read/write` - Allowlist management (Admin only)
 - `storage:read/write/delete` - Storage object access (own objects)
 - `storage:read_any/write_any/delete_any` - Storage object access (all objects, Admin only)
+- `health_data:read` - Read own health data
+- `health_data:write` - Write own health data
+- `health_data:read_any` - Admin: read any user's health data
+- `health_data:delete` - Delete own health data
 
 ## Database Tables
 
@@ -300,6 +383,20 @@ cd apps/api && npm run prisma:migrate
 - `device_codes` - Device authorization codes (RFC 8628)
 - `storage_objects` - File metadata, status, storage references
 - `storage_object_chunks` - Multipart upload chunk tracking
+- `health_metrics` - Time-series health measurements (steps, HR, BP, etc.)
+- `health_sleep_sessions` / `health_sleep_stages` - Sleep sessions with stage breakdown
+- `health_exercise_sessions` - Exercise/mindfulness sessions with JSONB attributes
+- `health_nutrition` - Nutrition entries with JSONB nutrients
+- `health_cycle_events` - Cycle tracking events with JSONB data
+- `health_lab_results` - Lab test results with reference ranges
+- `health_mood_scales` - User-defined mood scale definitions
+- `health_sessions` / `health_session_records` - Named record groupings
+- `health_record_attachments` - Media attached to health records
+- `health_record_comments` - Notes/comments on health records
+- `health_record_revisions` - Revision history for modified records
+- `user_devices` - Registered devices
+- `health_data_sources` - Data origin tracking
+- `health_sync_state` - Per-device sync state
 
 ## Access Control: Email Allowlist
 
