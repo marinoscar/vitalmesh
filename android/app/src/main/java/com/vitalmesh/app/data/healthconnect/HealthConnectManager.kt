@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.vitalmesh.app.data.local.logging.AppLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import javax.inject.Inject
@@ -16,22 +17,30 @@ import kotlin.reflect.KClass
 @Singleton
 class HealthConnectManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val appLogger: AppLogger,
 ) {
     private val client: HealthConnectClient by lazy {
         HealthConnectClient.getOrCreate(context)
     }
 
     suspend fun isAvailable(): Boolean {
-        return HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+        val status = HealthConnectClient.getSdkStatus(context)
+        val available = status == HealthConnectClient.SDK_AVAILABLE
+        appLogger.i(TAG, "Health Connect availability check: available=$available (status=$status)")
+        return available
     }
 
     suspend fun hasAllPermissions(permissions: Set<String>): Boolean {
         val granted = client.permissionController.getGrantedPermissions()
-        return granted.containsAll(permissions)
+        val hasAll = granted.containsAll(permissions)
+        appLogger.d(TAG, "Permissions check: has all=${hasAll}, granted=${granted.size}/${permissions.size}")
+        return hasAll
     }
 
     suspend fun getGrantedPermissions(): Set<String> {
-        return client.permissionController.getGrantedPermissions()
+        val granted = client.permissionController.getGrantedPermissions()
+        appLogger.d(TAG, "Granted permissions: ${granted.size}")
+        return granted
     }
 
     // Read records of any type within a time range
@@ -46,6 +55,7 @@ class HealthConnectManager @Inject constructor(
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
             )
         )
+        appLogger.d(TAG, "Read ${response.records.size} ${recordType.simpleName} records")
         return response.records
     }
 
@@ -86,6 +96,8 @@ class HealthConnectManager @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "HealthConnectManager"
+
         // All supported record types
         val ALL_RECORD_TYPES: Set<KClass<out Record>> = setOf(
             // Instantaneous

@@ -1,12 +1,12 @@
 package com.vitalmesh.app.sync
 
 import android.os.Build
-import android.util.Log
 import androidx.health.connect.client.records.*
 import com.vitalmesh.app.data.healthconnect.HealthConnectManager
 import com.vitalmesh.app.data.healthconnect.RecordMapper
 import com.vitalmesh.app.data.local.db.dao.SyncQueueDao
 import com.vitalmesh.app.data.local.db.entity.SyncQueueEntry
+import com.vitalmesh.app.data.local.logging.AppLogger
 import com.vitalmesh.app.data.remote.api.dto.*
 import com.vitalmesh.app.data.repository.HealthDataRepository
 import com.squareup.moshi.Moshi
@@ -21,6 +21,7 @@ class SyncManager @Inject constructor(
     private val healthDataRepository: HealthDataRepository,
     private val syncQueueDao: SyncQueueDao,
     private val moshi: Moshi,
+    private val appLogger: AppLogger,
 ) {
     companion object {
         private const val TAG = "SyncManager"
@@ -45,8 +46,12 @@ class SyncManager @Inject constructor(
      */
     suspend fun performFullSync(): SyncReport {
         val report = SyncReport()
+        appLogger.i(TAG, "Starting full sync")
 
-        if (!healthConnectManager.isAvailable()) {
+        val available = healthConnectManager.isAvailable()
+        appLogger.i(TAG, "Health Connect available: $available")
+        if (!available) {
+            appLogger.w(TAG, "Health Connect not available, aborting sync")
             report.errors.add("Health Connect not available")
             return report
         }
@@ -70,10 +75,11 @@ class SyncManager @Inject constructor(
             // Sync cycle
             syncCycleRecords(startTime, endTime, report)
         } catch (e: Exception) {
-            Log.e(TAG, "Sync failed", e)
+            appLogger.e(TAG, "Sync failed", e)
             report.errors.add("Sync failed: ${e.message}")
         }
 
+        appLogger.i(TAG, "Sync complete: ${report.totalSynced} synced, ${report.errors.size} errors")
         return report
     }
 
@@ -100,27 +106,31 @@ class SyncManager @Inject constructor(
         for (recordType in metricRecordTypes) {
             try {
                 val records = healthConnectManager.readRecords(recordType, startTime, endTime)
+                appLogger.d(TAG, "Read ${records.size} ${recordType.simpleName} records")
                 for (record in records) {
                     allMetricItems.addAll(RecordMapper.toMetricItems(record))
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to read ${recordType.simpleName}", e)
+                appLogger.w(TAG, "Failed to read ${recordType.simpleName}", e)
             }
         }
 
         // Send in batches of 500
+        appLogger.i(TAG, "Sending ${allMetricItems.size} metric items in batches of $MAX_METRICS_PER_BATCH")
         for (batch in allMetricItems.chunked(MAX_METRICS_PER_BATCH)) {
+            appLogger.d(TAG, "Sending metrics batch of ${batch.size}")
             val result = healthDataRepository.syncMetrics(
                 SyncMetricsRequest(source = syncSource, metrics = batch)
             )
             result.fold(
                 onSuccess = { resp ->
+                    appLogger.d(TAG, "Metrics batch success: synced=${resp.synced}, created=${resp.created}, updated=${resp.updated}")
                     report.metricsSynced += resp.synced
                     report.metricsCreated += resp.created
                     report.metricsUpdated += resp.updated
                 },
                 onFailure = { error ->
-                    Log.e(TAG, "Metrics batch failed", error)
+                    appLogger.e(TAG, "Metrics batch failed", error)
                     // Queue for retry
                     val json = moshi.adapter(SyncMetricsRequest::class.java)
                         .toJson(SyncMetricsRequest(source = syncSource, metrics = batch))
@@ -134,6 +144,7 @@ class SyncManager @Inject constructor(
     private suspend fun syncSleepRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
         try {
             val records = healthConnectManager.readRecords(SleepSessionRecord::class, startTime, endTime)
+            appLogger.d(TAG, "Read ${records.size} sleep records")
             val sessions = records.map { RecordMapper.toSleepSession(it) }
 
             for (batch in sessions.chunked(MAX_SESSIONS_PER_BATCH)) {
@@ -143,19 +154,20 @@ class SyncManager @Inject constructor(
                 result.fold(
                     onSuccess = { resp -> report.sleepSynced += resp.synced },
                     onFailure = { error ->
-                        Log.e(TAG, "Sleep batch failed", error)
+                        appLogger.e(TAG, "Sleep batch failed", error)
                         report.errors.add("Sleep sync failed: ${error.message}")
                     }
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read sleep records", e)
+            appLogger.w(TAG, "Failed to read sleep records", e)
         }
     }
 
     private suspend fun syncExerciseRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
         try {
             val records = healthConnectManager.readRecords(ExerciseSessionRecord::class, startTime, endTime)
+            appLogger.d(TAG, "Read ${records.size} exercise records")
             val sessions = records.map { RecordMapper.toExerciseSession(it) }
 
             for (batch in sessions.chunked(MAX_SESSIONS_PER_BATCH)) {
@@ -165,19 +177,20 @@ class SyncManager @Inject constructor(
                 result.fold(
                     onSuccess = { resp -> report.exerciseSynced += resp.synced },
                     onFailure = { error ->
-                        Log.e(TAG, "Exercise batch failed", error)
+                        appLogger.e(TAG, "Exercise batch failed", error)
                         report.errors.add("Exercise sync failed: ${error.message}")
                     }
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read exercise records", e)
+            appLogger.w(TAG, "Failed to read exercise records", e)
         }
     }
 
     private suspend fun syncNutritionRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
         try {
             val records = healthConnectManager.readRecords(NutritionRecord::class, startTime, endTime)
+            appLogger.d(TAG, "Read ${records.size} nutrition records")
             val entries = records.map { RecordMapper.toNutritionEntry(it) }
 
             for (batch in entries.chunked(MAX_SESSIONS_PER_BATCH)) {
@@ -187,13 +200,13 @@ class SyncManager @Inject constructor(
                 result.fold(
                     onSuccess = { resp -> report.nutritionSynced += resp.synced },
                     onFailure = { error ->
-                        Log.e(TAG, "Nutrition batch failed", error)
+                        appLogger.e(TAG, "Nutrition batch failed", error)
                         report.errors.add("Nutrition sync failed: ${error.message}")
                     }
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read nutrition records", e)
+            appLogger.w(TAG, "Failed to read nutrition records", e)
         }
     }
 
@@ -213,7 +226,7 @@ class SyncManager @Inject constructor(
                     RecordMapper.toCycleEvent(record)?.let { allEvents.add(it) }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to read ${recordType.simpleName}", e)
+                appLogger.w(TAG, "Failed to read ${recordType.simpleName}", e)
             }
         }
 
@@ -225,7 +238,7 @@ class SyncManager @Inject constructor(
                 result.fold(
                     onSuccess = { resp -> report.cycleSynced += resp.synced },
                     onFailure = { error ->
-                        Log.e(TAG, "Cycle batch failed", error)
+                        appLogger.e(TAG, "Cycle batch failed", error)
                         report.errors.add("Cycle sync failed: ${error.message}")
                     }
                 )
@@ -238,6 +251,7 @@ class SyncManager @Inject constructor(
      */
     suspend fun processQueue() {
         val pending = syncQueueDao.getPendingEntries(50)
+        appLogger.i(TAG, "Processing sync queue: ${pending.size} pending entries")
         for (entry in pending) {
             syncQueueDao.markSending(entry.id)
             try {

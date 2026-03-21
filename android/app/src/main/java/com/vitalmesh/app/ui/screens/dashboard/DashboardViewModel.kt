@@ -1,9 +1,9 @@
 package com.vitalmesh.app.ui.screens.dashboard
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitalmesh.app.data.local.logging.AppLogger
 import com.vitalmesh.app.data.repository.HealthDataRepository
 import com.vitalmesh.app.domain.model.HealthSummary
 import com.vitalmesh.app.sync.SyncManager
@@ -29,6 +29,7 @@ class DashboardViewModel @Inject constructor(
     private val healthDataRepository: HealthDataRepository,
     private val syncManager: SyncManager,
     @ApplicationContext private val context: Context,
+    private val appLogger: AppLogger,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardUiState())
@@ -48,8 +49,11 @@ class DashboardViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, isSyncing = true, error = null, syncMessage = "Reading health data...") }
 
             try {
+                val syncStart = System.currentTimeMillis()
+                appLogger.i(TAG, "Sync starting")
                 val report = syncManager.performFullSync()
-                Log.i(TAG, "Sync complete: ${report.totalSynced} synced, ${report.errors.size} errors")
+                val syncDuration = System.currentTimeMillis() - syncStart
+                appLogger.i(TAG, "Sync complete in ${syncDuration}ms: ${report.totalSynced} synced, ${report.errors.size} errors")
 
                 val message = buildString {
                     if (report.totalSynced > 0) {
@@ -72,7 +76,7 @@ class DashboardViewModel @Inject constructor(
 
                 _state.update { it.copy(isSyncing = false, syncMessage = message) }
             } catch (e: Exception) {
-                Log.e(TAG, "Sync failed", e)
+                appLogger.e(TAG, "Sync failed", e)
                 _state.update { it.copy(isSyncing = false, syncMessage = "Sync failed: ${e.message}") }
             }
 
@@ -85,10 +89,11 @@ class DashboardViewModel @Inject constructor(
         val result = healthDataRepository.getSummary(dateStr, "day")
         result.fold(
             onSuccess = { summary ->
+                appLogger.d(TAG, "Summary loaded for $date")
                 _state.update { it.copy(isLoading = false, summary = summary) }
             },
             onFailure = { error ->
-                Log.e(TAG, "Failed to load summary", error)
+                appLogger.e(TAG, "Failed to load summary", error)
                 _state.update { it.copy(isLoading = false, error = error.message) }
             }
         )
