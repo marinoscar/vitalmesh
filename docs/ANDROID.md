@@ -38,11 +38,14 @@ This document covers everything a developer needs to build, run, debug, and exte
 
 ### API Server
 
-The app communicates with the VitalMesh API. For local development:
+The app connects to different API servers depending on the build flavor:
 
-- Docker stack must be running (see [main README](../README.md))
-- Default URL from emulator: `http://10.0.2.2:3535/api`
-- Default URL from physical device: your machine's LAN IP, e.g. `http://192.168.1.x:3535/api`
+| Flavor | API URL | Use Case |
+|--------|---------|----------|
+| `dev` | `https://vitalmesh.dev.marin.cr/api` | Development / testing |
+| `prod` | `https://vitalmesh.marin.cr/api` | Production |
+
+For local emulator development, you can override the dev flavor URL to `http://10.0.2.2:8322/api` in `app/build.gradle.kts`.
 
 ---
 
@@ -62,29 +65,44 @@ Android Studio will detect `build.gradle.kts` and begin Gradle sync automaticall
 
 First sync downloads all dependencies and may take several minutes. Subsequent syncs are faster. If sync fails, see [Gradle Sync Fails](#gradle-sync-fails).
 
-### Step 3 — Configure API base URL (if needed)
+### Step 3 — Select build variant
 
-The default `API_BASE_URL` is set in `app/build.gradle.kts`:
+The project uses **product flavors** to target different environments:
+
+| Build Variant | API URL | App ID |
+|---------------|---------|--------|
+| `devDebug` | `https://vitalmesh.dev.marin.cr/api` | `com.vitalmesh.app.dev` |
+| `devRelease` | `https://vitalmesh.dev.marin.cr/api` | `com.vitalmesh.app.dev` |
+| `prodDebug` | `https://vitalmesh.marin.cr/api` | `com.vitalmesh.app` |
+| `prodRelease` | `https://vitalmesh.marin.cr/api` | `com.vitalmesh.app` |
+
+In Android Studio, select the build variant from **Build > Select Build Variant** (or the Build Variants panel on the left). Use `devDebug` for day-to-day development.
+
+The `dev` flavor appends `.dev` to the application ID, so both dev and prod builds can be installed side-by-side on the same device.
+
+**For local emulator testing** (connecting to a Docker stack on your machine), temporarily change the dev flavor URL in `app/build.gradle.kts`:
 
 ```kotlin
-buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3535/api\"")
+create("dev") {
+    // ...
+    buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8322/api\"")
+}
 ```
 
-- `10.0.2.2` is the special emulator loopback address for the host machine's `localhost`
-- For a physical device, change this to your machine's LAN IP before building
+`10.0.2.2` is the emulator's loopback address for the host machine's `localhost`.
 
 ### Step 4 — Verify the API server is running
 
 ```bash
-# From repo root — start the full Docker stack
-cd infra/compose
-docker compose -f base.compose.yml -f dev.compose.yml up
+curl https://vitalmesh.dev.marin.cr/api/health/live
 ```
 
-Confirm the API is reachable:
+Or for local dev:
 
 ```bash
-curl http://localhost:3535/api/health/live
+cd infra/compose
+docker compose -f base.compose.yml -f dev.compose.yml up
+curl http://localhost:8322/api/health/live
 ```
 
 ---
@@ -95,30 +113,46 @@ curl http://localhost:3535/api/health/live
 
 ```bash
 cd android
-./gradlew assembleDebug
+
+# Dev environment (vitalmesh.dev.marin.cr)
+./gradlew assembleDevDebug
+
+# Production environment (vitalmesh.marin.cr)
+./gradlew assembleProdDebug
 ```
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`
+APK output: `app/build/outputs/apk/dev/debug/app-dev-debug.apk`
 
 ### Install on Connected Device
 
 ```bash
 cd android
-./gradlew installDebug
+
+# Install dev build
+./gradlew installDevDebug
+
+# Install prod build
+./gradlew installProdDebug
 ```
 
-Requires a device connected via USB with USB debugging enabled, or a running emulator.
+Requires a device connected via USB with USB debugging enabled, or a running emulator. Both flavors can be installed side-by-side (different application IDs).
 
 ### Run from Android Studio
 
-1. Select a device or emulator from the toolbar dropdown
-2. Click Run (green play button) or press **Shift+F10**
+1. Select the build variant from **Build > Select Build Variant** (`devDebug` or `prodDebug`)
+2. Select a device or emulator from the toolbar dropdown
+3. Click Run (green play button) or press **Shift+F10**
 
 ### Release Build
 
 ```bash
 cd android
-./gradlew assembleRelease
+
+# Dev release
+./gradlew assembleDevRelease
+
+# Production release
+./gradlew assembleProdRelease
 ```
 
 A signing configuration is required before the release build will be installable. Signing is not yet set up in this project.
@@ -129,7 +163,7 @@ If you encounter stale build artifacts:
 
 ```bash
 cd android
-./gradlew clean assembleDebug
+./gradlew clean assembleDevDebug
 ```
 
 ---
@@ -378,9 +412,9 @@ The app uses RFC 8628 Device Authorization Grant, which avoids embedding OAuth c
 ### Debugging Auth Issues
 
 - Filter Logcat by tag `AuthRepository` to see device code requests, polling results, and token storage events
-- Verify the Docker stack is running and reachable from the device/emulator
-- Emulator must use `http://10.0.2.2:3535/api` — not `localhost` or `127.0.0.1`
-- Physical device must use the host machine's LAN IP and both must be on the same network
+- The `dev` build flavor connects to `https://vitalmesh.dev.marin.cr/api` — no local server needed
+- For local emulator testing, override the dev URL to `http://10.0.2.2:8322/api` in `build.gradle.kts`
+- Physical device can use the dev flavor URL directly (no local server needed)
 - Clear app data to force re-authentication: `adb shell pm clear com.vitalmesh.app`
 
 ---
@@ -622,21 +656,17 @@ assertThat(result).isInstanceOf(ListenableWorker.Result.Success::class.java)
 
 **Symptom:** Auth polling or health data upload fails with a network error.
 
-**Fixes by device type:**
+**Fixes:**
 
-| Device | Correct API_BASE_URL |
-|--------|---------------------|
-| Emulator | `http://10.0.2.2:3535/api` |
-| Physical device (USB) | `http://<host-LAN-IP>:3535/api` |
-| Physical device (same Wi-Fi) | `http://<host-LAN-IP>:3535/api` |
+1. Use the `dev` build flavor — it connects to `https://vitalmesh.dev.marin.cr/api` which is always available
+2. Verify the server is running: `curl https://vitalmesh.dev.marin.cr/api/health/live`
+3. If using a local emulator override, use `http://10.0.2.2:8322/api` (not `localhost`)
 
-Do not use `localhost` or `127.0.0.1` from an emulator or physical device — these resolve to the device itself, not the host machine.
-
-Confirm the Docker stack is running:
-
-```bash
-docker compose -f infra/compose/base.compose.yml -f infra/compose/dev.compose.yml ps
-```
+| Build Flavor | API URL |
+|--------------|---------|
+| `dev` (default) | `https://vitalmesh.dev.marin.cr/api` |
+| `prod` | `https://vitalmesh.marin.cr/api` |
+| Local override | `http://10.0.2.2:8322/api` (emulator only) |
 
 ### "Authorization failed" / 401 Errors
 
