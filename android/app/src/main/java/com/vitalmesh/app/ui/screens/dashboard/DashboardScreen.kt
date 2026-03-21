@@ -45,12 +45,6 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { onMetricClick("steps") },
-                    icon = { Icon(Icons.Default.Explore, "Browse") },
-                    label = { Text("Browse") }
-                )
-                NavigationBarItem(
-                    selected = false,
                     onClick = onNavigateToSync,
                     icon = { Icon(Icons.Default.Sync, "Sync") },
                     label = { Text("Sync") }
