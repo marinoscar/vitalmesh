@@ -1,6 +1,7 @@
 package com.vitalmesh.app.ui.screens.dashboard
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitalmesh.app.data.repository.HealthDataRepository
@@ -20,7 +21,7 @@ data class DashboardUiState(
     val summary: HealthSummary = HealthSummary(),
     val selectedDate: LocalDate = LocalDate.now(),
     val error: String? = null,
-    val syncError: String? = null,
+    val syncMessage: String? = null,
 )
 
 @HiltViewModel
@@ -33,31 +34,48 @@ class DashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
+    companion object {
+        private const val TAG = "DashboardViewModel"
+    }
+
     init {
-        // Start periodic sync on first dashboard load
         SyncWorker.enqueuePeriodicSync(context)
-        // Sync then load
         syncAndLoad()
     }
 
     private fun syncAndLoad() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, isSyncing = true, error = null, syncError = null) }
+            _state.update { it.copy(isLoading = true, isSyncing = true, error = null, syncMessage = "Reading health data...") }
 
-            // Sync from Health Connect to API
             try {
                 val report = syncManager.performFullSync()
-                _state.update {
-                    it.copy(
-                        isSyncing = false,
-                        syncError = if (report.hasErrors) "Sync had ${report.errors.size} error(s)" else null,
-                    )
+                Log.i(TAG, "Sync complete: ${report.totalSynced} synced, ${report.errors.size} errors")
+
+                val message = buildString {
+                    if (report.totalSynced > 0) {
+                        append("Synced ${report.totalSynced} records")
+                        val parts = mutableListOf<String>()
+                        if (report.metricsSynced > 0) parts.add("${report.metricsSynced} metrics")
+                        if (report.sleepSynced > 0) parts.add("${report.sleepSynced} sleep")
+                        if (report.exerciseSynced > 0) parts.add("${report.exerciseSynced} exercise")
+                        if (report.nutritionSynced > 0) parts.add("${report.nutritionSynced} nutrition")
+                        if (report.cycleSynced > 0) parts.add("${report.cycleSynced} cycle")
+                        if (parts.isNotEmpty()) append(" (${parts.joinToString(", ")})")
+                    } else {
+                        append("No new data to sync")
+                    }
+                    if (report.hasErrors) {
+                        append("\n")
+                        report.errors.forEach { append("\n• $it") }
+                    }
                 }
+
+                _state.update { it.copy(isSyncing = false, syncMessage = message) }
             } catch (e: Exception) {
-                _state.update { it.copy(isSyncing = false, syncError = e.message) }
+                Log.e(TAG, "Sync failed", e)
+                _state.update { it.copy(isSyncing = false, syncMessage = "Sync failed: ${e.message}") }
             }
 
-            // Load summary from API
             loadSummaryInternal(_state.value.selectedDate)
         }
     }
@@ -70,6 +88,7 @@ class DashboardViewModel @Inject constructor(
                 _state.update { it.copy(isLoading = false, summary = summary) }
             },
             onFailure = { error ->
+                Log.e(TAG, "Failed to load summary", error)
                 _state.update { it.copy(isLoading = false, error = error.message) }
             }
         )

@@ -90,7 +90,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    "Syncing health data from your devices...",
+                                    state.syncMessage ?: "Syncing health data from your devices...",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
@@ -118,11 +118,21 @@ fun DashboardScreen(
                     }
                 }
 
-                // Sync error banner
-                state.syncError?.let { syncError ->
+                // Sync message banner
+                state.syncMessage?.let { syncMessage ->
                     item {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                            Text(syncError, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        val hasErrors = syncMessage.contains("•") || syncMessage.contains("failed")
+                        Card(colors = CardDefaults.cardColors(
+                            containerColor = if (hasErrors) MaterialTheme.colorScheme.errorContainer
+                            else MaterialTheme.colorScheme.secondaryContainer
+                        )) {
+                            Text(
+                                syncMessage,
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (hasErrors) MaterialTheme.colorScheme.onErrorContainer
+                                else MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
                         }
                     }
                 }
