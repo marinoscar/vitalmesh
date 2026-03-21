@@ -394,6 +394,7 @@ describe('HealthDataSyncService', () => {
             exerciseType: 'running',
             startTime: '2024-01-15T07:00:00Z',
             endTime: '2024-01-15T08:00:00Z',
+            attributes: {},
           },
         ],
       };
@@ -416,6 +417,7 @@ describe('HealthDataSyncService', () => {
             exerciseType: 'cycling',
             startTime: '2024-01-15T09:00:00Z',
             endTime: '2024-01-15T10:00:00Z',
+            attributes: {},
             clientRecordId: 'ex-client-1',
           },
         ],
@@ -445,6 +447,7 @@ describe('HealthDataSyncService', () => {
             exerciseType: 'swimming',
             startTime: '2024-01-15T11:00:00Z',
             endTime: '2024-01-15T12:00:00Z',
+            attributes: {},
             clientRecordId: 'new-ex-client',
           },
         ],
