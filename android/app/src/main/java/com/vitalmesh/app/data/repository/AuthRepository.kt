@@ -50,7 +50,7 @@ class AuthRepository @Inject constructor(
     }
 
     fun pollForAuthorization(deviceCode: String, interval: Int, expiresIn: Int): Flow<DeviceAuthState> = flow {
-        emit(DeviceAuthState.Polling)
+        // Don't emit Polling here — CodeReady state already shows a polling indicator
         val deadline = System.currentTimeMillis() + (expiresIn * 1000L)
 
         while (System.currentTimeMillis() < deadline) {
