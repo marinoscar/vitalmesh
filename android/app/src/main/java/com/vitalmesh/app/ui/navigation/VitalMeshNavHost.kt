@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.vitalmesh.app.ui.screens.splash.SplashScreen
 import com.vitalmesh.app.ui.screens.onboarding.OnboardingScreen
 import com.vitalmesh.app.ui.screens.auth.SignInScreen
 import com.vitalmesh.app.ui.screens.permissions.PermissionsScreen
@@ -19,8 +20,22 @@ fun VitalMeshNavHost() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Onboarding.route
+        startDestination = Screen.Splash.route
     ) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onAuthenticated = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onUnauthenticated = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.Onboarding.route) {
             OnboardingScreen(
                 onGetStarted = { navController.navigate(Screen.SignIn.route) }
