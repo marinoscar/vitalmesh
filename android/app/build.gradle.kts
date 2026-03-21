@@ -97,7 +97,7 @@ dependencies {
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
 
     // Health Connect
-    implementation("androidx.health.connect:connect-client:1.1.0")
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha11")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.3")
