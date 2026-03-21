@@ -20,7 +20,9 @@ class HealthConnectManager @Inject constructor(
     private val appLogger: AppLogger,
 ) {
     private val client: HealthConnectClient by lazy {
-        HealthConnectClient.getOrCreate(context)
+        // Use the APK-based Health Connect client to avoid Samsung platform bugs
+        // ("width and height must be > 0" in HealthConnectClientUpsideDownImpl)
+        HealthConnectClient.getOrCreate(context, "com.google.android.apps.healthdata")
     }
 
     suspend fun isAvailable(): Boolean {

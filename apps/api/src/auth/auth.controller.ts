@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Body,
   UseGuards,
   Req,
   Res,
@@ -196,14 +197,15 @@ export class AuthController {
 
   /**
    * POST /auth/refresh
-   * Refresh access token using refresh token from cookie
+   * Refresh access token using refresh token from cookie or request body.
+   * Cookie is used by the web app; body is used by mobile clients.
    */
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh access token',
-    description: 'Exchanges a refresh token for a new access token',
+    description: 'Exchanges a refresh token for a new access token. Token can be in cookie (web) or body (mobile).',
   })
   @ApiResponse({
     status: 200,
@@ -216,8 +218,10 @@ export class AuthController {
   async refresh(
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) res: FastifyReply,
+    @Body() body: { refreshToken?: string },
   ) {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE];
+    // Accept refresh token from cookie (web) or body (mobile)
+    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE] || body?.refreshToken;
 
     if (!refreshToken) {
       throw new UnauthorizedException('No refresh token provided');
@@ -225,12 +229,13 @@ export class AuthController {
 
     const tokens = await this.authService.refreshAccessToken(refreshToken);
 
-    // Set new refresh token in cookie (rotation)
+    // Set new refresh token in cookie (for web clients)
     res.setCookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken!, COOKIE_OPTIONS);
 
-    // Return new access token
+    // Return both tokens (mobile clients need the new refresh token in the body)
     return {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       expiresIn: tokens.expiresIn,
     };
   }
