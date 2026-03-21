@@ -8,7 +8,7 @@ Deploy VitalMesh behind a two-tier Nginx reverse proxy with automatic SSL certif
 
 - **Wildcard HTTPS** for all `*.dev.marin.cr` subdomains using a single shared Let's Encrypt certificate
 - **Zero-downtime certificate renewal** via Certbot with AWS Route53 DNS validation
-- **Subdomain-based routing** — VitalMesh runs at `vitalmesh.dev.marin.cr` mapped to Docker Compose on port `8321`
+- **Subdomain-based routing** — VitalMesh runs at `vitalmesh.dev.marin.cr` mapped to Docker Compose on port `8322`
 - **Same-origin hosting** — frontend at `/`, API at `/api`, Swagger at `/api/docs`, all through one domain
 
 This guide assumes the shared wildcard infrastructure (DNS, certificate, host Nginx, certbot timer) is already in place from an earlier project (e.g., clipboard). The only new work is registering VitalMesh in the existing map and starting its Docker Compose stack.
@@ -23,12 +23,12 @@ Host Nginx (SSL termination, wildcard cert for *.dev.marin.cr)
 │
 │   map $host → $backend_port:
 │     clipboard.dev.marin.cr  → 127.0.0.1:8320
-│     vitalmesh.dev.marin.cr  → 127.0.0.1:8321    ← this project
+│     vitalmesh.dev.marin.cr  → 127.0.0.1:8322    ← this project
 │     <new-project>           → 127.0.0.1:<port>
 │
-▼  127.0.0.1:8321
+▼  127.0.0.1:8322
 Docker Compose (bridge network: app-network)
-├─ Nginx container (port 80 → exposed as 8321)
+├─ Nginx container (port 80 → exposed as 8322)
 │  ├── /api        → API container (NestJS + Fastify, port 3000)
 │  ├── /api/docs   → API container (Swagger UI)
 │  └── /           → Web container (React + MUI, port 80 prod / 5173 dev)
@@ -108,7 +108,7 @@ This is the only change required on the host. Add one line to the `map` block in
 ```nginx
 map $host $backend_port {
     clipboard.dev.marin.cr    8320;
-    vitalmesh.dev.marin.cr    8321;    # ← add this line
+    vitalmesh.dev.marin.cr    8322;    # ← add this line
     # <new-project>.dev.marin.cr  <port>;
 }
 ```
@@ -123,7 +123,7 @@ The full host Nginx config (`/etc/nginx/sites-available/dev-wildcard`) is shared
 
 ## Step 5: Docker Compose — Internal Nginx + Services
 
-VitalMesh's Docker Compose stack is self-contained under `infra/compose/`. It binds the internal Nginx to `127.0.0.1:8321:80`, matching the host Nginx map entry.
+VitalMesh's Docker Compose stack is self-contained under `infra/compose/`. It binds the internal Nginx to `127.0.0.1:8322:80`, matching the host Nginx map entry.
 
 ### 5a. Internal Nginx config (production)
 
@@ -169,7 +169,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "127.0.0.1:8321:80"           # Bound to localhost only; host Nginx proxies in
+      - "127.0.0.1:8322:80"           # Bound to localhost only; host Nginx proxies in
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -183,7 +183,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PORT=${PORT:-3000}
-      - APP_URL=${APP_URL:-http://localhost:8321}
+      - APP_URL=${APP_URL:-http://localhost:8322}
       - POSTGRES_HOST=${POSTGRES_HOST:-db}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -360,7 +360,7 @@ docker compose -f infra/compose/base.compose.yml -f infra/compose/dev.compose.ym
 
 **502 Bad Gateway:**
 - Docker containers not running. Check `docker compose ps`.
-- Port mismatch between host Nginx map (`8321`) and Docker Compose `ports` binding (`127.0.0.1:8321:80`).
+- Port mismatch between host Nginx map (`8322`) and Docker Compose `ports` binding (`127.0.0.1:8322:80`).
 - API container still starting. The API waits for the `db` health check, which can take 10–20 seconds on first start.
 
 **SSL certificate errors:**
