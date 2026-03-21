@@ -18,6 +18,7 @@ class SyncWorker @AssistedInject constructor(
     companion object {
         const val TAG = "SyncWorker"
         const val UNIQUE_WORK_NAME = "vitalmesh_sync"
+        private const val RETRY_WORK_NAME = "vitalmesh_sync_retry"
 
         fun enqueuePeriodicSync(context: Context, intervalMinutes: Long = 15) {
             val constraints = Constraints.Builder()
@@ -54,6 +55,24 @@ class SyncWorker @AssistedInject constructor(
                 .enqueue(request)
         }
 
+        fun enqueueRetrySync(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val request = OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .addTag("$TAG-retry")
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(
+                    RETRY_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    request,
+                )
+        }
+
         fun cancelSync(context: Context) {
             WorkManager.getInstance(context)
                 .cancelUniqueWork(UNIQUE_WORK_NAME)
@@ -67,14 +86,13 @@ class SyncWorker @AssistedInject constructor(
             // Process any queued entries first
             syncManager.processQueue()
 
-            // Perform full sync
-            val report = syncManager.performFullSync()
+            // Perform differential sync
+            val report = syncManager.performSync()
 
             Log.i(TAG, "Sync complete: ${report.totalSynced} records synced")
 
             if (report.hasErrors) {
                 Log.w(TAG, "Sync had errors: ${report.errors}")
-                // Return success even with partial errors, to keep the periodic schedule
                 Result.success(workDataOf(
                     "synced" to report.totalSynced,
                     "errors" to report.errors.size,
