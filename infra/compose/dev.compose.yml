@@ -39,10 +39,3 @@ services:
   nginx:
     volumes:
       - ../nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
-
-  # ---------------------------------------------------------------------------
-  # Database - Expose port for local tools
-  # ---------------------------------------------------------------------------
-  db:
-    ports:
-      - "5432:5432"
