@@ -15,6 +15,9 @@ export class PrismaService
         { emit: 'event', level: 'error' },
         { emit: 'event', level: 'warn' },
       ],
+      transactionOptions: {
+        timeout: 30000, // 30 seconds (default is 5s, too short for large batch upserts)
+      },
     });
   }
 
