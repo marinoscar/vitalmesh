@@ -1,6 +1,7 @@
 package com.vitalmesh.app.data.healthconnect
 
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.MealType
 import com.vitalmesh.app.data.remote.api.dto.*
 import java.util.UUID
 
@@ -185,16 +186,8 @@ object RecordMapper {
                     )
                 })
             }
-            record.route.takeIf { it.isNotEmpty() }?.let { route ->
-                put("route", route.map { point ->
-                    buildMap<String, Any> {
-                        put("lat", point.latitude)
-                        put("lng", point.longitude)
-                        point.altitude?.let { put("altitude_m", it.inMeters) }
-                        put("timestamp", point.time.toString())
-                    }
-                })
-            }
+            // Note: Route data is accessed via ExerciseRouteRecord (separate record type).
+            // It is not a direct property of ExerciseSessionRecord in HC 1.1.0.
         }
 
         return SyncExerciseSession(
@@ -280,7 +273,7 @@ object RecordMapper {
                 eventType = "cervical_mucus",
                 timestamp = record.time.toString(),
                 data = buildMap<String, Any> {
-                    record.texture?.let { put("texture", mapCervicalMucusTexture(it)) }
+                    record.appearance?.let { put("texture", mapCervicalMucusTexture(it)) }
                     record.sensation?.let { put("sensation", mapCervicalMucusSensation(it)) }
                 },
                 clientRecordId = record.metadata.id,
@@ -425,10 +418,10 @@ object RecordMapper {
 
     private fun mapMealType(mealType: Int): String? {
         return when (mealType) {
-            NutritionRecord.MEAL_TYPE_BREAKFAST -> "breakfast"
-            NutritionRecord.MEAL_TYPE_LUNCH -> "lunch"
-            NutritionRecord.MEAL_TYPE_DINNER -> "dinner"
-            NutritionRecord.MEAL_TYPE_SNACK -> "snack"
+            MealType.MEAL_TYPE_BREAKFAST -> "breakfast"
+            MealType.MEAL_TYPE_LUNCH -> "lunch"
+            MealType.MEAL_TYPE_DINNER -> "dinner"
+            MealType.MEAL_TYPE_SNACK -> "snack"
             else -> "unknown"
         }
     }
