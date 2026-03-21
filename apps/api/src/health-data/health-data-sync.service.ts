@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SourceType } from '@prisma/client';
+import { Prisma, SourceType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthDataSourceService } from './health-data-source.service';
 import { SyncMetricsDto } from './dto/sync-metrics.dto';
@@ -54,16 +54,20 @@ export class HealthDataSyncService {
           unit: item.unit,
           timestamp: new Date(item.timestamp),
           endTime: item.endTime ? new Date(item.endTime) : null,
-          source: item.source,
-          groupId: item.groupId,
-          tags: item.tags ?? null,
-          zoneOffset: item.zoneOffset,
-          endZoneOffset: item.endZoneOffset,
-          dataOrigin: item.dataOrigin,
-          recordingMethod: item.recordingMethod,
-          deviceType: item.deviceType,
-          metadata: item.metadata ?? null,
-          notes: item.notes,
+          source: item.source ?? null,
+          groupId: item.groupId ?? null,
+          tags: item.tags
+            ? (item.tags as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          zoneOffset: item.zoneOffset ?? null,
+          endZoneOffset: item.endZoneOffset ?? null,
+          dataOrigin: item.dataOrigin ?? null,
+          recordingMethod: item.recordingMethod ?? null,
+          deviceType: item.deviceType ?? null,
+          metadata: item.metadata
+            ? (item.metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          notes: item.notes ?? null,
           deviceId,
         };
 
@@ -144,14 +148,16 @@ export class HealthDataSyncService {
           startTime: new Date(session.startTime),
           endTime: new Date(session.endTime),
           durationMs: session.durationMs ?? null,
-          title: session.title,
-          notes: session.notes,
-          source: session.source,
-          zoneOffset: session.zoneOffset,
-          endZoneOffset: session.endZoneOffset,
-          dataOrigin: session.dataOrigin,
-          recordingMethod: session.recordingMethod,
-          metadata: session.metadata ?? null,
+          title: session.title ?? null,
+          notes: session.notes ?? null,
+          source: session.source ?? null,
+          zoneOffset: session.zoneOffset ?? null,
+          endZoneOffset: session.endZoneOffset ?? null,
+          dataOrigin: session.dataOrigin ?? null,
+          recordingMethod: session.recordingMethod ?? null,
+          metadata: session.metadata
+            ? (session.metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
           deviceId,
         };
 
@@ -260,16 +266,18 @@ export class HealthDataSyncService {
           exerciseType: session.exerciseType,
           startTime: new Date(session.startTime),
           endTime: new Date(session.endTime),
-          title: session.title,
+          title: session.title ?? null,
           isPlanned: session.isPlanned ?? false,
-          attributes: session.attributes,
-          source: session.source,
-          zoneOffset: session.zoneOffset,
-          endZoneOffset: session.endZoneOffset,
-          dataOrigin: session.dataOrigin,
-          recordingMethod: session.recordingMethod,
-          metadata: session.metadata ?? null,
-          notes: session.notes,
+          attributes: session.attributes as Prisma.InputJsonValue,
+          source: session.source ?? null,
+          zoneOffset: session.zoneOffset ?? null,
+          endZoneOffset: session.endZoneOffset ?? null,
+          dataOrigin: session.dataOrigin ?? null,
+          recordingMethod: session.recordingMethod ?? null,
+          metadata: session.metadata
+            ? (session.metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          notes: session.notes ?? null,
           deviceId,
         };
 
@@ -352,15 +360,17 @@ export class HealthDataSyncService {
         const mapped = {
           startTime: new Date(entry.startTime),
           endTime: new Date(entry.endTime),
-          mealType: entry.mealType,
-          name: entry.name,
-          nutrients: entry.nutrients,
-          source: entry.source,
-          zoneOffset: entry.zoneOffset,
-          endZoneOffset: entry.endZoneOffset,
-          dataOrigin: entry.dataOrigin,
-          recordingMethod: entry.recordingMethod,
-          metadata: entry.metadata ?? null,
+          mealType: entry.mealType ?? null,
+          name: entry.name ?? null,
+          nutrients: entry.nutrients as Prisma.InputJsonValue,
+          source: entry.source ?? null,
+          zoneOffset: entry.zoneOffset ?? null,
+          endZoneOffset: entry.endZoneOffset ?? null,
+          dataOrigin: entry.dataOrigin ?? null,
+          recordingMethod: entry.recordingMethod ?? null,
+          metadata: entry.metadata
+            ? (entry.metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
           deviceId,
         };
 
@@ -441,13 +451,15 @@ export class HealthDataSyncService {
           eventType: event.eventType,
           timestamp: new Date(event.timestamp),
           endTime: event.endTime ? new Date(event.endTime) : null,
-          data: event.data,
-          source: event.source,
-          zoneOffset: event.zoneOffset,
-          endZoneOffset: event.endZoneOffset,
-          dataOrigin: event.dataOrigin,
-          recordingMethod: event.recordingMethod,
-          metadata: event.metadata ?? null,
+          data: event.data as Prisma.InputJsonValue,
+          source: event.source ?? null,
+          zoneOffset: event.zoneOffset ?? null,
+          endZoneOffset: event.endZoneOffset ?? null,
+          dataOrigin: event.dataOrigin ?? null,
+          recordingMethod: event.recordingMethod ?? null,
+          metadata: event.metadata
+            ? (event.metadata as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
           deviceId,
         };
 
@@ -530,15 +542,17 @@ export class HealthDataSyncService {
             value: result.value,
             unit: result.unit,
             timestamp: new Date(result.timestamp),
-            rangeLow: result.rangeLow,
-            rangeHigh: result.rangeHigh,
-            status: result.status,
-            panelName: result.panelName,
-            labName: result.labName,
-            orderingProvider: result.orderingProvider,
-            notes: result.notes,
-            source: result.source,
-            tags: result.tags ?? null,
+            rangeLow: result.rangeLow ?? null,
+            rangeHigh: result.rangeHigh ?? null,
+            status: result.status ?? null,
+            panelName: result.panelName ?? null,
+            labName: result.labName ?? null,
+            orderingProvider: result.orderingProvider ?? null,
+            notes: result.notes ?? null,
+            source: result.source ?? null,
+            tags: result.tags
+              ? (result.tags as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
             deviceId,
           },
         });

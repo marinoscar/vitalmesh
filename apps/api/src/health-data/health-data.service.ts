@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   MetricsQueryDto,
@@ -485,7 +486,7 @@ export class HealthDataService {
         tableName: table,
         recordId: id,
         version: (record as { version: number }).version,
-        previousData: record as Record<string, unknown>,
+        previousData: record as Prisma.InputJsonValue,
         changedByUserId: userId,
         changeSource: dto.updateSource,
         changeComment: dto.updateComment ?? null,
@@ -689,7 +690,7 @@ export class HealthDataService {
         description: dto.description ?? null,
         startDate: new Date(dto.startDate),
         endDate: dto.endDate ? new Date(dto.endDate) : null,
-        tags: dto.tags ?? null,
+        tags: dto.tags ? (dto.tags as Prisma.InputJsonValue) : Prisma.JsonNull,
       },
     });
   }
@@ -721,7 +722,11 @@ export class HealthDataService {
           endDate: dto.endDate ? new Date(dto.endDate) : null,
         }),
         ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.tags !== undefined && { tags: dto.tags }),
+        ...(dto.tags !== undefined && {
+          tags: dto.tags
+            ? (dto.tags as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        }),
       },
     });
   }

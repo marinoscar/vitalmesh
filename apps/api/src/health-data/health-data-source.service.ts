@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SourceType } from '@prisma/client';
+import { Prisma, SourceType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncSourceDto } from './dto/sync-metrics.dto';
 
@@ -19,7 +19,7 @@ export class HealthDataSourceService {
         userId_deviceName_deviceModel: {
           userId,
           deviceName: source.deviceName,
-          deviceModel: source.deviceModel ?? null,
+          deviceModel: source.deviceModel ?? '',
         },
       },
       create: {
@@ -61,7 +61,7 @@ export class HealthDataSourceService {
         userId_sourceType_packageName: {
           userId,
           sourceType,
-          packageName: dataOrigin ?? null,
+          packageName: dataOrigin ?? '',
         },
       },
       create: {
