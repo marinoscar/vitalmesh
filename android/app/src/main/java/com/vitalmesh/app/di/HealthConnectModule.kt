@@ -2,6 +2,7 @@ package com.vitalmesh.app.di
 
 import android.content.Context
 import com.vitalmesh.app.data.healthconnect.HealthConnectManager
+import com.vitalmesh.app.data.local.logging.AppLogger
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,7 +18,8 @@ object HealthConnectModule {
     @Singleton
     fun provideHealthConnectManager(
         @ApplicationContext context: Context,
+        appLogger: AppLogger,
     ): HealthConnectManager {
-        return HealthConnectManager(context)
+        return HealthConnectManager(context, appLogger)
     }
 }
