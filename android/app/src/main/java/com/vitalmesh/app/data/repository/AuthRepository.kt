@@ -40,7 +40,7 @@ class AuthRepository @Inject constructor(
                 )
             )
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+                Result.success(response.body()!!.data)
             } else {
                 Result.failure(Exception("Failed to get device code: ${response.code()}"))
             }
@@ -61,7 +61,7 @@ class AuthRepository @Inject constructor(
 
                 when (response.code()) {
                     200 -> {
-                        val body = response.body()
+                        val body = response.body()?.data
                         if (body != null) {
                             tokenManager.saveTokens(body.accessToken, body.refreshToken)
                             // Fetch user info
@@ -131,7 +131,7 @@ class AuthRepository @Inject constructor(
         return try {
             val response = authApi.refreshToken(RefreshTokenRequest(refreshToken))
             if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
+                val body = response.body()!!.data
                 tokenManager.saveTokens(body.accessToken, body.refreshToken)
                 true
             } else {
