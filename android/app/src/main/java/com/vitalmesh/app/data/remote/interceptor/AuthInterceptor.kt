@@ -21,15 +21,6 @@ class AuthInterceptor @Inject constructor(
             chain.request()
         }
 
-        val response = chain.proceed(request)
-
-        // Don't try to refresh for auth endpoints
-        if (response.code == 401 && !request.url.encodedPath.contains("/auth/")) {
-            response.close()
-            // Token might be expired - the app should handle re-auth
-            // Token refresh will be handled at the repository level
-        }
-
-        return response
+        return chain.proceed(request)
     }
 }

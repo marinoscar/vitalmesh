@@ -1,6 +1,7 @@
 package com.vitalmesh.app.sync
 
 import android.os.Build
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import com.vitalmesh.app.data.healthconnect.HealthConnectManager
 import com.vitalmesh.app.data.healthconnect.RecordMapper
@@ -56,24 +57,34 @@ class SyncManager @Inject constructor(
             return report
         }
 
+        // Check which permissions are granted
+        val grantedPermissions = healthConnectManager.getGrantedPermissions()
+        appLogger.i(TAG, "Granted permissions: ${grantedPermissions.size}")
+        if (grantedPermissions.isEmpty()) {
+            appLogger.w(TAG, "No Health Connect permissions granted. Please grant permissions in Settings > Health Connect.")
+            report.errors.add("No Health Connect permissions granted. Go to Settings and grant access.")
+            return report
+        }
+        appLogger.d(TAG, "Granted: $grantedPermissions")
+
         val endTime = Instant.now()
         val startTime = endTime.minus(30, ChronoUnit.DAYS)
 
         try {
-            // Sync metrics (all numeric types)
-            syncMetricRecords(startTime, endTime, report)
+            // Sync metrics (all numeric types) - only read types we have permission for
+            syncMetricRecords(startTime, endTime, report, grantedPermissions)
 
             // Sync sleep
-            syncSleepRecords(startTime, endTime, report)
+            syncSleepRecords(startTime, endTime, report, grantedPermissions)
 
             // Sync exercise
-            syncExerciseRecords(startTime, endTime, report)
+            syncExerciseRecords(startTime, endTime, report, grantedPermissions)
 
             // Sync nutrition
-            syncNutritionRecords(startTime, endTime, report)
+            syncNutritionRecords(startTime, endTime, report, grantedPermissions)
 
             // Sync cycle
-            syncCycleRecords(startTime, endTime, report)
+            syncCycleRecords(startTime, endTime, report, grantedPermissions)
         } catch (e: Exception) {
             appLogger.e(TAG, "Sync failed", e)
             report.errors.add("Sync failed: ${e.message}")
@@ -83,7 +94,7 @@ class SyncManager @Inject constructor(
         return report
     }
 
-    private suspend fun syncMetricRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
+    private suspend fun syncMetricRecords(startTime: Instant, endTime: Instant, report: SyncReport, grantedPermissions: Set<String>) {
         val metricRecordTypes = listOf(
             WeightRecord::class, HeightRecord::class, BodyFatRecord::class,
             BoneMassRecord::class, LeanBodyMassRecord::class, BodyWaterMassRecord::class,
@@ -104,6 +115,12 @@ class SyncManager @Inject constructor(
         val allMetricItems = mutableListOf<SyncMetricItem>()
 
         for (recordType in metricRecordTypes) {
+            // Skip record types we don't have permission for
+            val requiredPermission = HealthPermission.getReadPermission(recordType)
+            if (requiredPermission !in grantedPermissions) {
+                appLogger.d(TAG, "Skipping ${recordType.simpleName} - no permission")
+                continue
+            }
             try {
                 val records = healthConnectManager.readRecords(recordType, startTime, endTime)
                 appLogger.d(TAG, "Read ${records.size} ${recordType.simpleName} records")
@@ -141,7 +158,11 @@ class SyncManager @Inject constructor(
         }
     }
 
-    private suspend fun syncSleepRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
+    private suspend fun syncSleepRecords(startTime: Instant, endTime: Instant, report: SyncReport, grantedPermissions: Set<String>) {
+        if (HealthPermission.getReadPermission(SleepSessionRecord::class) !in grantedPermissions) {
+            appLogger.d(TAG, "Skipping sleep - no permission")
+            return
+        }
         try {
             val records = healthConnectManager.readRecords(SleepSessionRecord::class, startTime, endTime)
             appLogger.d(TAG, "Read ${records.size} sleep records")
@@ -164,7 +185,11 @@ class SyncManager @Inject constructor(
         }
     }
 
-    private suspend fun syncExerciseRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
+    private suspend fun syncExerciseRecords(startTime: Instant, endTime: Instant, report: SyncReport, grantedPermissions: Set<String>) {
+        if (HealthPermission.getReadPermission(ExerciseSessionRecord::class) !in grantedPermissions) {
+            appLogger.d(TAG, "Skipping exercise - no permission")
+            return
+        }
         try {
             val records = healthConnectManager.readRecords(ExerciseSessionRecord::class, startTime, endTime)
             appLogger.d(TAG, "Read ${records.size} exercise records")
@@ -187,7 +212,11 @@ class SyncManager @Inject constructor(
         }
     }
 
-    private suspend fun syncNutritionRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
+    private suspend fun syncNutritionRecords(startTime: Instant, endTime: Instant, report: SyncReport, grantedPermissions: Set<String>) {
+        if (HealthPermission.getReadPermission(NutritionRecord::class) !in grantedPermissions) {
+            appLogger.d(TAG, "Skipping nutrition - no permission")
+            return
+        }
         try {
             val records = healthConnectManager.readRecords(NutritionRecord::class, startTime, endTime)
             appLogger.d(TAG, "Read ${records.size} nutrition records")
@@ -210,7 +239,7 @@ class SyncManager @Inject constructor(
         }
     }
 
-    private suspend fun syncCycleRecords(startTime: Instant, endTime: Instant, report: SyncReport) {
+    private suspend fun syncCycleRecords(startTime: Instant, endTime: Instant, report: SyncReport, grantedPermissions: Set<String>) {
         val cycleRecordTypes = listOf(
             MenstruationFlowRecord::class, MenstruationPeriodRecord::class,
             OvulationTestRecord::class, CervicalMucusRecord::class,
@@ -220,6 +249,11 @@ class SyncManager @Inject constructor(
         val allEvents = mutableListOf<SyncCycleEvent>()
 
         for (recordType in cycleRecordTypes) {
+            val requiredPermission = HealthPermission.getReadPermission(recordType)
+            if (requiredPermission !in grantedPermissions) {
+                appLogger.d(TAG, "Skipping ${recordType.simpleName} - no permission")
+                continue
+            }
             try {
                 val records = healthConnectManager.readRecords(recordType, startTime, endTime)
                 for (record in records) {
