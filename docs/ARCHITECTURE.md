@@ -15,10 +15,12 @@ This document provides a comprehensive architectural overview of the Enterprise 
 3. [Architecture Principles](#3-architecture-principles)
 4. [Technology Stack](#4-technology-stack)
 5. [Component Architecture](#5-component-architecture)
+   - [5.5 Health Data Architecture](#55-health-data-architecture)
 6. [Data Architecture](#6-data-architecture)
 7. [Security Architecture](#7-security-architecture)
 8. [API Architecture](#8-api-architecture)
 9. [Frontend Architecture](#9-frontend-architecture)
+   - [9.5 Android Architecture](#95-android-architecture)
 10. [Infrastructure Architecture](#10-infrastructure-architecture)
 11. [Observability Architecture](#11-observability-architecture)
 12. [Testing Architecture](#12-testing-architecture)
@@ -39,6 +41,8 @@ The Enterprise Application Foundation is a production-grade web application temp
 - **Flexible Configuration**: JSONB-based settings framework for system and user preferences
 - **Enterprise Observability**: OpenTelemetry instrumentation with traces, metrics, and structured logs
 - **Agent-Friendly Development**: Modular architecture designed for AI coding agent collaboration
+- **Health Data Platform**: Time-series health metrics ingestion from Android Health Connect with 50+ data type support
+- **Mobile Client**: Native Android app (Kotlin/Compose) with offline-first sync engine
 
 ### Key Characteristics
 
@@ -50,6 +54,9 @@ The Enterprise Application Foundation is a production-grade web application temp
 | **Access Control** | Email allowlist + RBAC (Admin/Contributor/Viewer) |
 | **Data Storage** | PostgreSQL with Prisma ORM |
 | **Extensibility** | JSONB settings, modular NestJS structure |
+| **Health Data** | Time-series metrics, sleep, exercise, nutrition, cycle tracking, lab results |
+| **Mobile Client** | Android (Kotlin + Jetpack Compose + Health Connect SDK) |
+| **Sync Strategy** | Differential sync with offline queue and automatic retry |
 
 ### Target Audience
 
@@ -66,6 +73,29 @@ The Enterprise Application Foundation is a production-grade web application temp
 ### High-Level Architecture
 
 ```
+┌──────────────────────────┐
+│     ANDROID APP          │
+│  (Kotlin + Compose)      │
+│                          │
+│  ┌────────────────────┐  │
+│  │  Health Connect    │  │
+│  │  (Fitbit, Garmin,  │  │
+│  │   Samsung, Google) │  │
+│  └────────────────────┘  │
+│           │              │
+│  ┌────────────────────┐  │
+│  │  SyncManager       │  │
+│  │  + WorkManager     │  │
+│  │  + Room Queue      │  │
+│  └────────────────────┘  │
+│           │              │
+│  RFC 8628 Device Auth    │
+│  JWT Bearer Token        │
+└──────────┬───────────────┘
+           │
+           ▼
+    /api/health-data/*
+
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              NGINX REVERSE PROXY                             │
 │                           (Security Headers, Routing)                        │
@@ -119,6 +149,18 @@ The Enterprise Application Foundation is a production-grade web application temp
                                      │  • device_codes                │
                                      │  • allowed_emails              │
                                      │  • audit_events                │
+                                     │  • user_devices                │
+                                     │  • health_metrics              │
+                                     │  • health_sleep_sessions       │
+                                     │  • health_sleep_stages         │
+                                     │  • health_exercise_sessions    │
+                                     │  • health_nutrition            │
+                                     │  • health_cycle_events         │
+                                     │  • health_lab_results          │
+                                     │  • health_record_attachments   │
+                                     │  • health_record_comments      │
+                                     │  • health_record_revisions     │
+                                     │  • health_sessions             │
                                      │                                │
                                      │           Port 5432            │
                                      └────────────────────────────────┘
@@ -213,6 +255,13 @@ All components served from the same base URL via Nginx reverse proxy:
 | **UI Library** | Material UI (MUI) | 5.x | Component library |
 | **Database** | PostgreSQL | 14+ | Data persistence |
 | **ORM** | Prisma | 5.x | Database access |
+| **Mobile Language** | Kotlin | 2.1.10 | Android app |
+| **Mobile UI** | Jetpack Compose | BOM 2025.02 | Native Android UI |
+| **Mobile DI** | Hilt | 2.54.1 | Dependency injection |
+| **Health SDK** | Health Connect | 1.1.0-alpha13 | Biometric data access |
+| **Charts** | Vico | 2.1.2 | Compose-native charts |
+| **Local DB** | Room | 2.6.1 | Offline sync queue |
+| **Background** | WorkManager | 2.10.0 | Periodic sync |
 
 ### 4.2 Authentication & Security
 
@@ -463,6 +512,119 @@ apps/api/src/storage/
     └── processors/
         └── base-processor.interface.ts
 ```
+
+### 5.5 Health Data Architecture
+
+The health data platform ingests biometric data from Android Health Connect and exposes it through a queryable API with support for 50+ record types.
+
+#### Health Data Module Structure
+
+```
+apps/api/src/health-data/
+├── health-data.module.ts          # Module registration
+├── health-data.controller.ts      # Query + CRUD endpoints (40+ routes)
+├── health-data.service.ts         # Query, aggregation, update, revision logic
+├── health-data-sync.controller.ts # Sync endpoints (device → server)
+├── health-data-sync.service.ts    # Batch upsert with deduplication
+├── health-data-source.service.ts  # Device + source registration
+├── devices.controller.ts          # Device management
+├── devices.service.ts             # Device CRUD
+└── dto/                           # 17 Zod schema files
+```
+
+#### Data Model Strategy
+
+| Strategy | Description |
+|----------|-------------|
+| **Time-Series Core** | `health_metrics` table handles ~35 HC record types using a flexible (timestamp, metric, value, unit) pattern |
+| **Structured Tables** | Complex data gets dedicated tables (sleep, exercise, nutrition, cycle, labs) |
+| **Cross-Cutting Features** | Attachments, comments, revisions, sessions work across all health tables using polymorphic (table_name, record_id) references |
+
+#### Health Data ERD (simplified)
+
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌────────────────────┐
+│   user_devices   │     │    health_metrics     │     │ health_sleep_      │
+│                  │     │                      │     │ sessions           │
+│ id (PK)          │◄────│ device_id (FK)        │     │                    │
+│ user_id (FK)     │     │ user_id (FK)          │     │ id (PK)            │
+│ device_name      │     │ timestamp             │     │ user_id (FK)       │
+│ device_model     │     │ metric                │     │ start_time         │
+│ last_sync_at     │     │ value                 │     │ end_time           │
+└─────────────────┘     │ unit                  │     │ client_record_id   │
+                        │ client_record_id      │     └────────┬───────────┘
+                        │ group_id (BP pairs)   │              │
+                        │ tags (JSONB)          │     ┌────────┴───────────┐
+                        └──────────────────────┘     │ health_sleep_      │
+                                                      │ stages             │
+┌──────────────────────┐     ┌──────────────────────┐ │ session_id (FK)    │
+│ health_exercise_     │     │ health_nutrition      │ │ stage              │
+│ sessions             │     │                      │ │ start_time         │
+│                      │     │ id (PK)              │ │ end_time           │
+│ id (PK)              │     │ user_id (FK)          │ └────────────────────┘
+│ user_id (FK)         │     │ start_time            │
+│ exercise_type        │     │ meal_type             │
+│ attributes (JSONB)   │     │ nutrients (JSONB)     │
+└──────────────────────┘     └──────────────────────┘
+
+┌──────────────────────┐     ┌──────────────────────┐
+│ health_cycle_events  │     │ health_lab_results    │
+│                      │     │                      │
+│ event_type           │     │ test_name             │
+│ data (JSONB)         │     │ value, unit           │
+└──────────────────────┘     │ range_low/high        │
+                             │ panel_name            │
+Cross-cutting:               └──────────────────────┘
+┌──────────────────────┐  ┌─────────────────────────┐  ┌────────────────────┐
+│health_record_        │  │health_record_           │  │health_record_      │
+│attachments           │  │comments                 │  │revisions           │
+│ table_name + id      │  │ table_name + id         │  │ table_name + id    │
+│ storage_object_id    │  │ comment, type            │  │ previous_data      │
+└──────────────────────┘  └─────────────────────────┘  └────────────────────┘
+```
+
+#### Sync Architecture
+
+```
+Android Device                          VitalMesh API
+─────────────                          ─────────────
+Health Connect ──read──▶ RecordMapper
+                              │
+                    ┌─────────┴─────────┐
+                    │  SyncManager      │
+                    │  - Batch (500/req) │
+                    │  - Per data type   │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │  SyncWorker       │──────POST────▶  health-data-sync.controller
+                    │  (WorkManager)    │                         │
+                    │  15-min periodic  │                         ▼
+                    └─────────┬─────────┘               health-data-sync.service
+                              │                          │
+                    On failure:                  ┌───────┴────────┐
+                              │                  │ Upsert with    │
+                    ┌─────────▼─────────┐       │ client_record_id│
+                    │  Room SyncQueue   │       │ deduplication   │
+                    │  (offline retry)  │       └───────┬────────┘
+                    └───────────────────┘               │
+                                                        ▼
+                                                   PostgreSQL
+```
+
+#### Deduplication Strategy
+
+- Each Health Connect record has a `metadata.id` stored as `client_record_id`
+- Upsert: `INSERT ON CONFLICT(user_id, client_record_id) DO UPDATE`
+- Blood pressure uses `group_id` to pair systolic + diastolic readings
+- Series records (HeartRate, Speed) generate one row per sample with composite `clientRecordId = "{hc_id}-{sample_timestamp}"`
+
+#### Multi-Tenant Data Isolation
+
+- Every health table has `user_id FK → users`
+- All queries scoped with `WHERE user_id = currentUser.id`
+- `@CurrentUser('id')` decorator extracts user from JWT
+- Admin override via `health_data:read_any` permission
 
 ---
 
@@ -917,6 +1079,59 @@ interface AuthContext {
   </ProtectedRoute>
 } />
 ```
+
+---
+
+## 9.5 Android Architecture
+
+### Android Architecture Overview
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                        UI Layer                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐  │
+│  │Onboarding│ │Dashboard │ │  Detail  │ │ Sync Status  │  │
+│  │ SignIn   │ │          │ │  Profile │ │  Settings    │  │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
+│       └─────────────┴────────────┴──────────────┘          │
+│                         │                                   │
+│                   ┌─────┴─────┐                             │
+│                   │ ViewModels│  (Hilt-injected)            │
+│                   └─────┬─────┘                             │
+├─────────────────────────┼──────────────────────────────────┤
+│                   Domain Layer                              │
+│  ┌──────────┐  ┌────────┴──────┐  ┌──────────────────┐    │
+│  │  Models  │  │ Repositories  │  │  SyncManager     │    │
+│  │ (User,   │  │ (Auth,        │  │  + SyncWorker    │    │
+│  │  Health  │  │  HealthData)  │  │  + SyncQueue     │    │
+│  │  Summary)│  │               │  │                  │    │
+│  └──────────┘  └──────┬────────┘  └────────┬─────────┘    │
+├────────────────────────┼───────────────────┼──────────────┤
+│                   Data Layer                               │
+│  ┌──────────────┐  ┌──┴──────────┐  ┌─────┴────────────┐  │
+│  │HealthConnect │  │ Retrofit    │  │ Room Database    │  │
+│  │Manager       │  │ + OkHttp    │  │ (SyncQueue)      │  │
+│  │+ RecordMapper│  │ + Moshi     │  │                  │  │
+│  └──────────────┘  └─────────────┘  └──────────────────┘  │
+│  ┌──────────────┐  ┌─────────────┐                        │
+│  │ TokenManager │  │AuthIntercept│                        │
+│  │(Encrypted SP)│  │   or        │                        │
+│  └──────────────┘  └─────────────┘                        │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| UI Framework | Jetpack Compose | Declarative, M3 support, Kotlin-native |
+| DI | Hilt | Standard Android DI, integrates with WorkManager/ViewModel |
+| Local DB | Room | Only for sync queue; server is source of truth |
+| Networking | Retrofit + Moshi | Industry standard, type-safe, code generation |
+| Background Sync | WorkManager | Survives app kills, battery-optimized, constraints |
+| Auth | RFC 8628 | No WebView needed, works on TV/IoT too |
+| Token Storage | EncryptedSharedPreferences | AES256-GCM, no rooted device risk |
+| Health Data | Health Connect SDK | Google's official API, aggregates all device data |
 
 ---
 
@@ -1636,3 +1851,4 @@ Implementation specs in `docs/specs/`:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | January 2026 | AI Assistant | Initial comprehensive architecture document |
+| 1.1 | March 2026 | AI Assistant | Added health data platform, Android app, and 14 new health DB tables |
