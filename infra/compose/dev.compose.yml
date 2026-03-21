@@ -34,6 +34,13 @@ services:
     command: npm run dev
 
   # ---------------------------------------------------------------------------
+  # Nginx - Development overrides (swap to dev config for Vite HMR)
+  # ---------------------------------------------------------------------------
+  nginx:
+    volumes:
+      - ../nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+
+  # ---------------------------------------------------------------------------
   # Database - Expose port for local tools
   # ---------------------------------------------------------------------------
   db:
