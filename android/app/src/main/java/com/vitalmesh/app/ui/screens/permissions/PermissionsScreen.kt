@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -21,6 +22,7 @@ data class PermissionCategory(
     val icon: @Composable () -> Unit,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsScreen(
     onComplete: () -> Unit,
@@ -39,76 +41,108 @@ fun PermissionsScreen(
         viewModel.checkPermissions()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-    ) {
-        Text("Connect Your Health Data", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Grant access to the health data you want to sync",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (!isAvailable) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                Text(
-                    "Health Connect is not available on this device",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(viewModel.categories) { category ->
-                    val isGranted = granted.containsAll(category.permissions)
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isGranted) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                        ),
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Connect Your Health Data", fontWeight = FontWeight.Bold) },
+            )
+        },
+        bottomBar = {
+            Surface(tonalElevation = 3.dp) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                ) {
+                    Button(
+                        onClick = { permissionsLauncher.launch(viewModel.allPermissions) },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        enabled = isAvailable,
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text("Grant Access")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = onComplete,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Skip for Now")
+                    }
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Grant access to the health data you want to sync",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (!isAvailable) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Text(
+                        "Health Connect is not available on this device",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                ) {
+                    items(viewModel.categories) { category ->
+                        val isGranted = granted.containsAll(category.permissions)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (isGranted) 0.dp else 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isGranted) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface,
+                            ),
                         ) {
-                            category.icon()
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(category.name, style = MaterialTheme.typography.titleMedium)
-                                Text(category.description, style = MaterialTheme.typography.bodySmall)
-                            }
-                            if (isGranted) {
-                                Icon(Icons.Default.CheckCircle, "Granted", tint = MaterialTheme.colorScheme.primary)
+                            Row(
+                                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                category.icon()
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        category.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        category.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (isGranted) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        "Granted",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { permissionsLauncher.launch(viewModel.allPermissions) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = isAvailable,
-        ) {
-            Text("Grant Access")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(
-            onClick = onComplete,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Skip for Now")
         }
     }
 }

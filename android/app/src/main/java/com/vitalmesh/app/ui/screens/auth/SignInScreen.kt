@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -21,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,135 +61,140 @@ fun SignInScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "VitalMesh",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
 
-        Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                text = "VitalMesh",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
 
-        when (val currentState = state) {
-            is DeviceAuthState.Idle -> {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Preparing sign in...")
-            }
+            Spacer(modifier = Modifier.height(48.dp))
 
-            is DeviceAuthState.CodeReady -> {
-                Text(
-                    text = "Enter this code to sign in:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
+            when (val currentState = state) {
+                is DeviceAuthState.Idle -> {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Preparing sign in...")
+                }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                is DeviceAuthState.CodeReady -> {
+                    Text(
+                        text = "Enter this code to sign in:",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                    )
 
-                // Large user code display
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
                     ) {
-                        Text(
-                            text = currentState.userCode,
-                            fontSize = 36.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            letterSpacing = 4.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = currentState.userCode,
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 4.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(currentState.userCode))
+                        }
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy code")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Copy Code")
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentState.verificationUri))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                    ) {
+                        Icon(Icons.Default.OpenInBrowser, contentDescription = "Open browser")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open in Browser")
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Waiting for authorization...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                is DeviceAuthState.Polling -> {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Waiting for authorization...")
+                }
+
+                is DeviceAuthState.Authorized -> {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Signed in! Redirecting...")
+                }
+
+                is DeviceAuthState.Error -> {
+                    Text(
+                        text = currentState.message,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.retry() }) {
+                        Text("Try Again")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Copy button
-                OutlinedButton(
-                    onClick = {
-                        clipboardManager.setText(AnnotatedString(currentState.userCode))
+                is DeviceAuthState.Expired -> {
+                    Text(
+                        text = "Code expired. Please try again.",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { viewModel.retry() }) {
+                        Text("Get New Code")
                     }
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy code")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Copy Code")
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Open browser button
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(currentState.verificationUri))
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.OpenInBrowser, contentDescription = "Open browser")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open in Browser")
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Waiting for authorization...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            is DeviceAuthState.Polling -> {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Waiting for authorization...")
-            }
-
-            is DeviceAuthState.Authorized -> {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Signed in! Redirecting...")
-            }
-
-            is DeviceAuthState.Error -> {
-                Text(
-                    text = currentState.message,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.retry() }) {
-                    Text("Try Again")
                 }
             }
 
-            is DeviceAuthState.Expired -> {
-                Text(
-                    text = "Code expired. Please try again.",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.retry() }) {
-                    Text("Get New Code")
-                }
-            }
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
