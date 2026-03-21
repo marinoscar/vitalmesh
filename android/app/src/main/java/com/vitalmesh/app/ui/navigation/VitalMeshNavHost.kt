@@ -4,18 +4,20 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.vitalmesh.app.data.local.logging.AppLogger
 import com.vitalmesh.app.ui.screens.splash.SplashScreen
 import com.vitalmesh.app.ui.screens.onboarding.OnboardingScreen
 import com.vitalmesh.app.ui.screens.auth.SignInScreen
 import com.vitalmesh.app.ui.screens.permissions.PermissionsScreen
 import com.vitalmesh.app.ui.screens.dashboard.DashboardScreen
 import com.vitalmesh.app.ui.screens.detail.DataDetailScreen
+import com.vitalmesh.app.ui.screens.logs.LogsScreen
 import com.vitalmesh.app.ui.screens.sync.SyncStatusScreen
 import com.vitalmesh.app.ui.screens.settings.SettingsScreen
 import com.vitalmesh.app.ui.screens.profile.ProfileScreen
 
 @Composable
-fun VitalMeshNavHost() {
+fun VitalMeshNavHost(appLogger: AppLogger) {
     val navController = rememberNavController()
 
     NavHost(
@@ -75,10 +77,20 @@ fun VitalMeshNavHost() {
             SyncStatusScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                appLogger = appLogger,
+                onBack = { navController.popBackStack() },
+                onNavigateToLogs = { navController.navigate(Screen.Logs.route) },
+            )
         }
         composable(Screen.Profile.route) {
             ProfileScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Screen.Logs.route) {
+            LogsScreen(
+                appLogger = appLogger,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

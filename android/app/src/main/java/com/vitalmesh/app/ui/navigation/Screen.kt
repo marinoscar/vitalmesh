@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
     data object SyncStatus : Screen("sync_status")
     data object Settings : Screen("settings")
     data object Profile : Screen("profile")
+    data object Logs : Screen("logs")
 }
