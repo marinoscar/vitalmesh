@@ -41,6 +41,13 @@ fun PermissionsScreen(
         viewModel.checkPermissions()
     }
 
+    // Auto-proceed when permissions are granted
+    LaunchedEffect(granted) {
+        if (granted.isNotEmpty()) {
+            onComplete()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

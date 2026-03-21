@@ -31,6 +31,11 @@ fun VitalMeshNavHost(appLogger: AppLogger) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
+                onNeedsPermissions = {
+                    navController.navigate(Screen.Permissions.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
                 onUnauthenticated = {
                     navController.navigate(Screen.Onboarding.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }

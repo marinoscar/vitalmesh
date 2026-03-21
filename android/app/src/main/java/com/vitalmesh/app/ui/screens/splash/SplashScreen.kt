@@ -12,6 +12,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun SplashScreen(
     onAuthenticated: () -> Unit,
+    onNeedsPermissions: () -> Unit,
     onUnauthenticated: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel(),
 ) {
@@ -20,6 +21,7 @@ fun SplashScreen(
     LaunchedEffect(state) {
         when (state) {
             SplashState.Authenticated -> onAuthenticated()
+            SplashState.NeedsPermissions -> onNeedsPermissions()
             SplashState.Unauthenticated -> onUnauthenticated()
             SplashState.Loading -> { /* wait */ }
         }
