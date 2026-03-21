@@ -9,7 +9,7 @@ describe('AppBar', () => {
     it('should render app title', () => {
       render(<AppBar />);
 
-      expect(screen.getByText(/enterprise app/i)).toBeInTheDocument();
+      expect(screen.getByText(/vitalmesh/i)).toBeInTheDocument();
     });
 
     it('should render as banner landmark', () => {
@@ -87,7 +87,7 @@ describe('AppBar', () => {
 
       render(<AppBar />);
 
-      const title = screen.getByText(/enterprise app/i);
+      const title = screen.getByText(/vitalmesh/i);
       await user.click(title);
 
       // Navigation should be triggered
@@ -97,7 +97,7 @@ describe('AppBar', () => {
     it('should have clickable title', () => {
       render(<AppBar />);
 
-      const title = screen.getByText(/enterprise app/i);
+      const title = screen.getByText(/vitalmesh/i);
       expect(title).toHaveStyle({ cursor: 'pointer' });
     });
   });
@@ -123,7 +123,7 @@ describe('AppBar', () => {
     it('should render all elements on desktop', () => {
       render(<AppBar />);
 
-      expect(screen.getByText(/enterprise app/i)).toBeInTheDocument();
+      expect(screen.getByText(/vitalmesh/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
     });
   });
