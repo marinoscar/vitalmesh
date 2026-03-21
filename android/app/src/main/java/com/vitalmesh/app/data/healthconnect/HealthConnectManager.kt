@@ -43,20 +43,29 @@ class HealthConnectManager @Inject constructor(
         return granted
     }
 
-    // Read records of any type within a time range
+    // Read records of any type within a time range (paginated to avoid Samsung HC bugs)
     suspend fun <T : Record> readRecords(
         recordType: KClass<T>,
         startTime: Instant,
         endTime: Instant,
     ): List<T> {
-        val response = client.readRecords(
-            ReadRecordsRequest(
+        val allRecords = mutableListOf<T>()
+        var pageToken: String? = null
+
+        do {
+            val request = ReadRecordsRequest(
                 recordType = recordType,
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
+                pageSize = 1000,
+                pageToken = pageToken,
             )
-        )
-        appLogger.d(TAG, "Read ${response.records.size} ${recordType.simpleName} records")
-        return response.records
+            val response = client.readRecords(request)
+            allRecords.addAll(response.records)
+            pageToken = response.pageToken
+        } while (pageToken != null)
+
+        appLogger.d(TAG, "Read ${allRecords.size} ${recordType.simpleName} records")
+        return allRecords
     }
 
     // Get a changes token for differential sync
