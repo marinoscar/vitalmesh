@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { HealthSummary, DateRangeSelection } from '../types';
 import { getHealthSummary } from '../services/api';
 
@@ -50,8 +50,11 @@ export function useHealthSummary({ selection }: UseHealthSummaryParams): UseHeal
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Stable key so useCallback only re-fires when the resolved dates change
-  const { from, to } = resolveDates(selection);
+  // Stabilize dates so they only recompute when selection actually changes
+  const { from, to } = useMemo(
+    () => resolveDates(selection),
+    [selection.range, selection.customDays],
+  );
 
   const fetchSummary = useCallback(async () => {
     setIsLoading(true);
@@ -64,7 +67,6 @@ export function useHealthSummary({ selection }: UseHealthSummaryParams): UseHeal
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to]);
 
   useEffect(() => {
