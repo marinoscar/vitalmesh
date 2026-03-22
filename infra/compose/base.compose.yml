@@ -29,7 +29,6 @@ services:
       - web
     networks:
       - app-network
-      - devnet
 
   # ---------------------------------------------------------------------------
   # API - NestJS Backend
