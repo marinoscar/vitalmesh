@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.vitalmesh.app.sync.ConnectivityRetryCallback
+import com.vitalmesh.app.sync.SyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -23,6 +24,7 @@ class VitalMeshApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        SyncWorker.createNotificationChannel(this)
         connectivityRetryCallback.register(this)
     }
 }

@@ -1,9 +1,14 @@
 package com.vitalmesh.app.sync
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
+import com.vitalmesh.app.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -19,8 +24,25 @@ class SyncWorker @AssistedInject constructor(
         const val TAG = "SyncWorker"
         const val UNIQUE_WORK_NAME = "vitalmesh_sync"
         private const val RETRY_WORK_NAME = "vitalmesh_sync_retry"
+        const val NOTIFICATION_CHANNEL_ID = "vitalmesh_sync_channel"
+        private const val NOTIFICATION_ID = 1001
 
-        fun enqueuePeriodicSync(context: Context, intervalMinutes: Long = 15) {
+        fun createNotificationChannel(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    "Health Data Sync",
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = "Background health data synchronization"
+                    setShowBadge(false)
+                }
+                val manager = context.getSystemService(NotificationManager::class.java)
+                manager.createNotificationChannel(channel)
+            }
+        }
+
+        fun enqueuePeriodicSync(context: Context, intervalMinutes: Long = 60) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -29,14 +51,14 @@ class SyncWorker @AssistedInject constructor(
                 intervalMinutes, TimeUnit.MINUTES
             )
                 .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 2, TimeUnit.MINUTES)
                 .addTag(TAG)
                 .build()
 
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
                     UNIQUE_WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     request,
                 )
         }
@@ -48,6 +70,7 @@ class SyncWorker @AssistedInject constructor(
 
             val request = OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(constraints)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .addTag(TAG)
                 .build()
 
@@ -79,8 +102,31 @@ class SyncWorker @AssistedInject constructor(
         }
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val notification = NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("VitalMesh")
+            .setContentText("Syncing health data...")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
+    }
+
     override suspend fun doWork(): Result {
         Log.i(TAG, "Starting health data sync")
+
+        // Run as foreground service to prevent being killed
+        setForeground(getForegroundInfo())
 
         return try {
             // Process any queued entries first
