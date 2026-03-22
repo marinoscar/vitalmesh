@@ -20,9 +20,9 @@
     "@emotion/styled": "^11.x",
     "@mui/icons-material": "^5.x",
     "@mui/material": "^5.x",
+    "@mui/x-charts": "^8.28.0",
     "react": "^18.x",
     "react-dom": "^18.x",
-    "recharts": "^2.15.x",
     "react-router-dom": "^6.x"
   },
   "devDependencies": {
