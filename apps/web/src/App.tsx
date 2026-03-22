@@ -14,7 +14,8 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const ActivateDevicePage = lazy(() => import('./pages/ActivateDevicePage'));
-const HomePage = lazy(() => import('./pages/HomePage'));
+const HealthDashboardPage = lazy(() => import('./pages/HealthDashboardPage'));
+const HealthDetailPage = lazy(() => import('./pages/HealthDetailPage'));
 const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 const SystemSettingsPage = lazy(() => import('./pages/SystemSettingsPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
@@ -48,7 +49,8 @@ function AppRoutes() {
               <Route path="/activate" element={<ActivateDevicePage />} />
 
               <Route element={<Layout />}>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={<HealthDashboardPage />} />
+                <Route path="/health/:metric" element={<HealthDetailPage />} />
                 <Route path="/settings" element={<UserSettingsPage />} />
                 <Route path="/admin/users" element={<UserManagementPage />} />
                 <Route path="/admin/settings" element={<SystemSettingsPage />} />

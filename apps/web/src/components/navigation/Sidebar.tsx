@@ -12,7 +12,7 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Home as HomeIcon,
+  MonitorHeart as HealthIcon,
   Settings as SettingsIcon,
   AdminPanelSettings as AdminIcon,
   People as PeopleIcon,
@@ -35,8 +35,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const menuItems = [
     {
-      label: 'Home',
-      icon: <HomeIcon />,
+      label: 'Health',
+      icon: <HealthIcon />,
       path: '/',
       visible: true,
     },
@@ -84,7 +84,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           .map((item) => (
             <ListItem key={item.path} disablePadding>
               <ListItemButton
-                selected={location.pathname === item.path}
+                selected={item.path === '/' ? location.pathname === '/' || location.pathname.startsWith('/health') : location.pathname === item.path}
                 onClick={() => handleNavigate(item.path)}
                 sx={{
                   '&.Mui-selected': {
