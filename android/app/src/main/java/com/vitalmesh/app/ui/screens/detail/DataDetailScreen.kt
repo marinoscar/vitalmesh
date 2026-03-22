@@ -2,6 +2,7 @@ package com.vitalmesh.app.ui.screens.detail
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -10,13 +11,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataDetailScreen(
     metric: String,
     onBack: () -> Unit,
+    viewModel: DataDetailViewModel = hiltViewModel(),
 ) {
+    val state by viewModel.state.collectAsState()
     val title = metric.replace("_", " ").replaceFirstChar { it.uppercase() }
 
     Scaffold(
@@ -32,55 +36,75 @@ fun DataDetailScreen(
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
         ) {
             // Time range tabs
             item {
-                var selectedTab by remember { mutableIntStateOf(0) }
-                TabRow(selectedTabIndex = selectedTab) {
-                    listOf("Day", "Week", "Month", "Year").forEachIndexed { index, label ->
-                        Tab(selected = selectedTab == index, onClick = { selectedTab = index }) {
-                            Text(label, modifier = Modifier.padding(16.dp))
+                TabRow(selectedTabIndex = state.timeRange.ordinal) {
+                    TimeRange.entries.forEach { range ->
+                        Tab(
+                            selected = state.timeRange == range,
+                            onClick = { viewModel.setTimeRange(range) },
+                        ) {
+                            Text(range.label, modifier = Modifier.padding(16.dp))
                         }
-                    }
-                }
-            }
-
-            // Chart placeholder
-            item {
-                Card(modifier = Modifier.fillMaxWidth().height(200.dp)) {
-                    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                        Text("Chart for $title", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
 
             // Stats row
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    StatItem("Min", "—")
-                    StatItem("Max", "—")
-                    StatItem("Avg", "—")
-                    StatItem("Latest", "—")
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    if (state.isLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            StatItem("Min", state.stats.min)
+                            StatItem("Max", state.stats.max)
+                            StatItem("Avg", state.stats.avg)
+                            StatItem("Latest", state.stats.latest)
+                        }
+                    }
                 }
             }
 
-            // Data list placeholder
-            item {
-                Text("Recent Records", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            // Error
+            state.error?.let { error ->
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                        Text(
+                            error,
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
             }
-            items(5) { index ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+
+            // Records header
+            if (!state.isLoading) {
+                item {
                     Text(
-                        "Record ${index + 1}",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
+                        if (state.records.isEmpty()) "No records found" else "Recent Records (${state.records.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
+            }
+
+            // Records list
+            items(state.records, key = { it.id }) { record ->
+                RecordCard(record)
             }
         }
     }
@@ -89,7 +113,45 @@ fun DataDetailScreen(
 @Composable
 private fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun RecordCard(record: DetailRecord) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    record.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    record.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (record.value.isNotEmpty()) {
+                Text(
+                    record.value,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
