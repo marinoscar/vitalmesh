@@ -236,3 +236,97 @@ data class SyncStateItem(
     val syncStatus: String? = null,
     val errorMessage: String? = null,
 )
+
+// Paginated response wrapper
+@JsonClass(generateAdapter = true)
+data class PaginatedResponse<T>(val data: T, val meta: PaginationMeta)
+
+@JsonClass(generateAdapter = true)
+data class PaginationMeta(
+    val page: Int,
+    val pageSize: Int,
+    val totalItems: Int,
+    val totalPages: Int,
+)
+
+// Query response DTOs
+@JsonClass(generateAdapter = true)
+data class HealthMetricRecord(
+    val id: String,
+    val timestamp: String,
+    val endTime: String? = null,
+    val metric: String,
+    val value: Double,
+    val unit: String,
+    val source: String? = null,
+    val groupId: String? = null,
+    val tags: Map<String, Any>? = null,
+    val dataOrigin: String? = null,
+    val notes: String? = null,
+    val createdAt: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class HealthSleepRecord(
+    val id: String,
+    val startTime: String,
+    val endTime: String,
+    val durationMs: Long? = null,
+    val title: String? = null,
+    val notes: String? = null,
+    val source: String? = null,
+    val dataOrigin: String? = null,
+    val stages: List<SleepStageRecord>? = null,
+    val createdAt: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class SleepStageRecord(
+    val stage: String,
+    val startTime: String,
+    val endTime: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class HealthExerciseRecord(
+    val id: String,
+    val startTime: String,
+    val endTime: String,
+    val exerciseType: String,
+    val title: String? = null,
+    val attributes: Map<String, Any>? = null,
+    val source: String? = null,
+    val dataOrigin: String? = null,
+    val notes: String? = null,
+    val createdAt: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class HealthNutritionRecord(
+    val id: String,
+    val startTime: String,
+    val endTime: String,
+    val mealType: String? = null,
+    val name: String? = null,
+    val nutrients: Map<String, Double>? = null,
+    val source: String? = null,
+    val dataOrigin: String? = null,
+    val createdAt: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class HealthCycleRecord(
+    val id: String,
+    val timestamp: String,
+    val endTime: String? = null,
+    val eventType: String,
+    val data: Map<String, Any>? = null,
+    val source: String? = null,
+    val dataOrigin: String? = null,
+    val createdAt: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupedMetricsResponse(
+    val groups: List<List<HealthMetricRecord>>,
+)

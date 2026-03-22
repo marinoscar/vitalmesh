@@ -116,6 +116,102 @@ class HealthDataRepository @Inject constructor(
         }
     }
 
+    suspend fun queryMetrics(
+        metric: String? = null, from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 50,
+    ): Result<List<HealthMetricRecord>> {
+        return try {
+            val response = healthDataApi.queryMetrics(metric, from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query metrics failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun queryGroupedMetrics(
+        metric: String? = null, from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 20,
+    ): Result<GroupedMetricsResponse> {
+        return try {
+            val response = healthDataApi.queryGroupedMetrics(metric, from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query grouped metrics failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun querySleep(
+        from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 20,
+    ): Result<List<HealthSleepRecord>> {
+        return try {
+            val response = healthDataApi.querySleep(from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query sleep failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun queryExercise(
+        exerciseType: String? = null, from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 20,
+    ): Result<List<HealthExerciseRecord>> {
+        return try {
+            val response = healthDataApi.queryExercise(exerciseType, from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query exercise failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun queryNutrition(
+        mealType: String? = null, from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 20,
+    ): Result<List<HealthNutritionRecord>> {
+        return try {
+            val response = healthDataApi.queryNutrition(mealType, from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query nutrition failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun queryCycle(
+        eventType: String? = null, from: String? = null, to: String? = null,
+        page: Int = 1, pageSize: Int = 20,
+    ): Result<List<HealthCycleRecord>> {
+        return try {
+            val response = healthDataApi.queryCycle(eventType, from, to, page, pageSize)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception("Query cycle failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun mapToHealthSummary(response: HealthSummaryResponse): HealthSummary {
         return HealthSummary(
             steps = StepsSummary(response.steps.total, response.steps.average, response.steps.latest),

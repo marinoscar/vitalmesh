@@ -31,4 +31,63 @@ interface HealthDataApi {
 
     @PUT("health-data/sync/state")
     suspend fun updateSyncState(@Body request: UpdateSyncStateRequest): Response<ApiResponse<List<SyncStateResponse>>>
+
+    // Query endpoints
+    @GET("health-data/metrics")
+    suspend fun queryMetrics(
+        @Query("metric") metric: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("sortOrder") sortOrder: String = "desc",
+    ): Response<PaginatedResponse<List<HealthMetricRecord>>>
+
+    @GET("health-data/metrics/grouped")
+    suspend fun queryGroupedMetrics(
+        @Query("metric") metric: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+    ): Response<ApiResponse<GroupedMetricsResponse>>
+
+    @GET("health-data/sleep")
+    suspend fun querySleep(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("sortOrder") sortOrder: String = "desc",
+    ): Response<PaginatedResponse<List<HealthSleepRecord>>>
+
+    @GET("health-data/exercise")
+    suspend fun queryExercise(
+        @Query("exerciseType") exerciseType: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("sortOrder") sortOrder: String = "desc",
+    ): Response<PaginatedResponse<List<HealthExerciseRecord>>>
+
+    @GET("health-data/nutrition")
+    suspend fun queryNutrition(
+        @Query("mealType") mealType: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("sortOrder") sortOrder: String = "desc",
+    ): Response<PaginatedResponse<List<HealthNutritionRecord>>>
+
+    @GET("health-data/cycle")
+    suspend fun queryCycle(
+        @Query("eventType") eventType: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20,
+        @Query("sortOrder") sortOrder: String = "desc",
+    ): Response<PaginatedResponse<List<HealthCycleRecord>>>
 }
