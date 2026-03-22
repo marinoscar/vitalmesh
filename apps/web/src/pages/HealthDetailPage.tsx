@@ -13,10 +13,10 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { useHealthMetrics } from '../hooks/useHealthMetrics';
-import { DateRangeSelector } from '../components/health/DateRangeSelector';
+import { DateRangeSelector, loadPersistedSelection } from '../components/health/DateRangeSelector';
 import { StatsRow } from '../components/health/StatsRow';
 import { RecordList } from '../components/health/RecordList';
-import type { DateRange, HealthMetricRecord, SleepSession, ExerciseSession } from '../types';
+import type { DateRangeSelection, HealthMetricRecord, SleepSession, ExerciseSession } from '../types';
 
 const MetricChart = lazy(() => import('../components/health/MetricChart'));
 
@@ -45,16 +45,31 @@ function formatDuration(ms: number): string {
   return `${minutes}m`;
 }
 
-function getDateRange(range: DateRange): { from: string; to: string } {
+function getDateRange(selection: DateRangeSelection): { from: string; to: string } {
   const now = new Date();
   const to = now.toISOString();
   const from = new Date(now);
-  if (range === 'day') {
-    from.setHours(0, 0, 0, 0);
-  } else if (range === 'week') {
-    from.setDate(from.getDate() - 7);
-  } else {
-    from.setDate(from.getDate() - 30);
+  switch (selection.range) {
+    case 'today':
+      from.setHours(0, 0, 0, 0);
+      break;
+    case 'week':
+      from.setDate(from.getDate() - 7);
+      break;
+    case '30d':
+      from.setDate(from.getDate() - 30);
+      break;
+    case '90d':
+      from.setDate(from.getDate() - 90);
+      break;
+    case 'year':
+      from.setDate(from.getDate() - 365);
+      break;
+    case 'custom': {
+      const days = selection.customDays ?? 30;
+      from.setDate(from.getDate() - days);
+      break;
+    }
   }
   return { from: from.toISOString(), to };
 }
@@ -104,8 +119,10 @@ function getChartConfig(metric: string) {
 export default function HealthDetailPage() {
   const { metric = 'steps' } = useParams<{ metric: string }>();
   const navigate = useNavigate();
-  const [range, setRange] = useState<DateRange>('week');
-  const { from, to } = useMemo(() => getDateRange(range), [range]);
+  const [selection, setSelection] = useState<DateRangeSelection>(() =>
+    loadPersistedSelection({ range: 'week' }),
+  );
+  const { from, to } = useMemo(() => getDateRange(selection), [selection]);
 
   const { records, isLoading, error, refresh } = useHealthMetrics({
     metric,
@@ -260,7 +277,7 @@ export default function HealthDetailPage() {
           <Typography variant="h4" component="h1" sx={{ flex: 1 }}>
             {METRIC_LABELS[metric] || metric}
           </Typography>
-          <DateRangeSelector value={range} onChange={setRange} />
+          <DateRangeSelector selection={selection} onSelectionChange={setSelection} />
         </Box>
 
         {/* Error */}

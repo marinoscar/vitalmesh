@@ -94,7 +94,12 @@ export interface DeviceAuthorizationResponse {
 }
 
 // Health data types
-export type DateRange = 'day' | 'week' | 'month';
+export type DateRange = 'today' | 'week' | '30d' | '90d' | 'year' | 'custom';
+
+export interface DateRangeSelection {
+  range: DateRange;
+  customDays?: number;
+}
 
 export interface PaginatedMeta {
   page: number;

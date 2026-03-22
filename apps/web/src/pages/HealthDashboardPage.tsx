@@ -21,9 +21,9 @@ import {
   FitnessCenter,
 } from '@mui/icons-material';
 import { useHealthSummary } from '../hooks/useHealthSummary';
-import { DateRangeSelector } from '../components/health/DateRangeSelector';
+import { DateRangeSelector, loadPersistedSelection } from '../components/health/DateRangeSelector';
 import { HealthSummaryCard } from '../components/health/HealthSummaryCard';
-import type { DateRange, HealthMetricRecord, SleepSession, ExerciseSession } from '../types';
+import type { DateRangeSelection, HealthMetricRecord, SleepSession, ExerciseSession } from '../types';
 import { getHealthMetrics, getSleepSessions, getExerciseSessions } from '../services/api';
 
 const MetricChart = lazy(() => import('../components/health/MetricChart'));
@@ -35,23 +35,40 @@ function formatDuration(ms: number): string {
   return `${minutes}m`;
 }
 
-function getDateRange(range: DateRange): { from: string; to: string } {
+function getDateRange(selection: DateRangeSelection): { from: string; to: string } {
   const now = new Date();
   const to = now.toISOString();
   const from = new Date(now);
-  if (range === 'day') {
-    from.setHours(0, 0, 0, 0);
-  } else if (range === 'week') {
-    from.setDate(from.getDate() - 7);
-  } else {
-    from.setDate(from.getDate() - 30);
+  switch (selection.range) {
+    case 'today':
+      from.setHours(0, 0, 0, 0);
+      break;
+    case 'week':
+      from.setDate(from.getDate() - 7);
+      break;
+    case '30d':
+      from.setDate(from.getDate() - 30);
+      break;
+    case '90d':
+      from.setDate(from.getDate() - 90);
+      break;
+    case 'year':
+      from.setDate(from.getDate() - 365);
+      break;
+    case 'custom': {
+      const days = selection.customDays ?? 30;
+      from.setDate(from.getDate() - days);
+      break;
+    }
   }
   return { from: from.toISOString(), to };
 }
 
 export default function HealthDashboardPage() {
-  const [range, setRange] = useState<DateRange>('week');
-  const { summary, isLoading, error, refresh } = useHealthSummary({ range });
+  const [selection, setSelection] = useState<DateRangeSelection>(() =>
+    loadPersistedSelection({ range: 'week' }),
+  );
+  const { summary, isLoading, error, refresh } = useHealthSummary({ selection });
   const navigate = useNavigate();
 
   // Chart data state
@@ -65,7 +82,7 @@ export default function HealthDashboardPage() {
 
   const fetchChartData = useCallback(async () => {
     setChartsLoading(true);
-    const { from, to } = getDateRange(range);
+    const { from, to } = getDateRange(selection);
     try {
       const [stepsResult, hrResult] = await Promise.all([
         getHealthMetrics({ metric: 'steps', from, to, pageSize: 100, sortOrder: 'asc' }),
@@ -102,10 +119,10 @@ export default function HealthDashboardPage() {
     } finally {
       setChartsLoading(false);
     }
-  }, [range]);
+  }, [selection]);
 
   const fetchRecentActivity = useCallback(async () => {
-    const { from, to } = getDateRange(range);
+    const { from, to } = getDateRange(selection);
     try {
       const [sleepResult, exerciseResult] = await Promise.all([
         getSleepSessions({ from, to, pageSize: 5 }),
@@ -116,7 +133,7 @@ export default function HealthDashboardPage() {
     } catch {
       // Non-critical
     }
-  }, [range]);
+  }, [selection]);
 
   useEffect(() => {
     fetchChartData();
@@ -140,7 +157,7 @@ export default function HealthDashboardPage() {
           <Typography variant="h4" component="h1">
             Health Dashboard
           </Typography>
-          <DateRangeSelector value={range} onChange={setRange} />
+          <DateRangeSelector selection={selection} onSelectionChange={setSelection} />
         </Box>
 
         {/* Error state */}

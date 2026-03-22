@@ -289,10 +289,14 @@ export async function authorizeDevice(
 export async function getHealthSummary(params?: {
   date?: string;
   range?: string;
+  from?: string;
+  to?: string;
 }): Promise<HealthSummary> {
   const searchParams = new URLSearchParams();
   if (params?.date) searchParams.set('date', params.date);
   if (params?.range) searchParams.set('range', params.range);
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
   const query = searchParams.toString();
   return api.get<HealthSummary>(`/health-data/summary${query ? `?${query}` : ''}`);
 }
