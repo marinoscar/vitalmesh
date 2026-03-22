@@ -89,14 +89,27 @@ export default function HealthDashboardPage() {
         getHealthMetrics({ metric: 'heart_rate', from, to, pageSize: 100, sortOrder: 'asc' }),
       ]);
 
-      // Aggregate steps by day
-      const stepsByDay = new Map<string, number>();
+      // Aggregate steps by day or week depending on range span
+      const useWeekly = selection.range === '90d' || selection.range === 'year' ||
+        (selection.range === 'custom' && (selection.customDays ?? 0) > 30);
+      const stepsBucket = new Map<string, number>();
       (stepsResult as HealthMetricRecord[]).forEach((r) => {
-        const day = r.timestamp.slice(0, 10);
-        stepsByDay.set(day, (stepsByDay.get(day) || 0) + r.value);
+        const d = new Date(r.timestamp);
+        let key: string;
+        if (useWeekly) {
+          // ISO week start (Monday)
+          const day = new Date(d);
+          const dayOfWeek = day.getDay();
+          const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          day.setDate(day.getDate() + diff);
+          key = `Wk ${(day.getMonth() + 1)}/${day.getDate()}`;
+        } else {
+          key = r.timestamp.slice(0, 10);
+        }
+        stepsBucket.set(key, (stepsBucket.get(key) || 0) + r.value);
       });
       setStepsData(
-        Array.from(stepsByDay.entries()).map(([date, value]) => ({ date, value })),
+        Array.from(stepsBucket.entries()).map(([date, value]) => ({ date, value })),
       );
 
       // Aggregate HR by day (min/max/avg)

@@ -218,21 +218,33 @@ export default function HealthDetailPage() {
         max: Math.max(...values),
       }));
     }
-    // Default: aggregate by day for bar charts
+    // Default: aggregate by day or week for bar charts
     if (metric === 'steps' || metric === 'active_calories') {
-      const byDay = new Map<string, number>();
+      const useWeekly = selection.range === '90d' || selection.range === 'year' ||
+        (selection.range === 'custom' && (selection.customDays ?? 0) > 30);
+      const bucket = new Map<string, number>();
       (records as HealthMetricRecord[]).forEach((r) => {
-        const day = r.timestamp.slice(0, 10);
-        byDay.set(day, (byDay.get(day) || 0) + r.value);
+        const d = new Date(r.timestamp);
+        let key: string;
+        if (useWeekly) {
+          const day = new Date(d);
+          const dayOfWeek = day.getDay();
+          const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          day.setDate(day.getDate() + diff);
+          key = `Wk ${(day.getMonth() + 1)}/${day.getDate()}`;
+        } else {
+          key = r.timestamp.slice(0, 10);
+        }
+        bucket.set(key, (bucket.get(key) || 0) + r.value);
       });
-      return Array.from(byDay.entries()).map(([date, value]) => ({ date, value }));
+      return Array.from(bucket.entries()).map(([date, value]) => ({ date, value }));
     }
     // Line chart metrics (weight, etc.)
     return (records as HealthMetricRecord[]).map((r) => ({
       date: new Date(r.timestamp).toLocaleDateString(),
       value: r.value,
     }));
-  }, [records, metric]);
+  }, [records, metric, selection]);
 
   // Transform records for the list
   const recordItems = useMemo(() => {
