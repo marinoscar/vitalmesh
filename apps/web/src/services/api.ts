@@ -199,6 +199,13 @@ import type {
   UserListItem,
   DeviceActivationInfo,
   DeviceAuthorizationResponse,
+  HealthSummary,
+  HealthMetricRecord,
+  GroupedMetricsResponse,
+  SleepSession,
+  ExerciseSession,
+  NutritionEntry,
+  PaginatedMeta,
 } from '../types';
 
 // Allowlist API
@@ -276,4 +283,100 @@ export async function authorizeDevice(
     userCode,
     approve,
   });
+}
+
+// Health Data API
+
+export async function getHealthSummary(params?: {
+  date?: string;
+  range?: string;
+}): Promise<HealthSummary> {
+  const searchParams = new URLSearchParams();
+  if (params?.date) searchParams.set('date', params.date);
+  if (params?.range) searchParams.set('range', params.range);
+  const query = searchParams.toString();
+  return api.get<HealthSummary>(`/health-data/summary${query ? `?${query}` : ''}`);
+}
+
+export async function getHealthMetrics(params?: {
+  metric?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<{ data: HealthMetricRecord[]; meta: PaginatedMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.metric) searchParams.set('metric', params.metric);
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
+  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+  if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+  const query = searchParams.toString();
+  return api.get<{ data: HealthMetricRecord[]; meta: PaginatedMeta }>(`/health-data/metrics${query ? `?${query}` : ''}`);
+}
+
+export async function getGroupedMetrics(params?: {
+  metric?: string;
+  from?: string;
+  to?: string;
+}): Promise<GroupedMetricsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.metric) searchParams.set('metric', params.metric);
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
+  const query = searchParams.toString();
+  return api.get<GroupedMetricsResponse>(`/health-data/metrics/grouped${query ? `?${query}` : ''}`);
+}
+
+export async function getSleepSessions(params?: {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<{ data: SleepSession[]; meta: PaginatedMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
+  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+  if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+  const query = searchParams.toString();
+  return api.get<{ data: SleepSession[]; meta: PaginatedMeta }>(`/health-data/sleep${query ? `?${query}` : ''}`);
+}
+
+export async function getExerciseSessions(params?: {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<{ data: ExerciseSession[]; meta: PaginatedMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
+  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+  if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+  const query = searchParams.toString();
+  return api.get<{ data: ExerciseSession[]; meta: PaginatedMeta }>(`/health-data/exercise${query ? `?${query}` : ''}`);
+}
+
+export async function getNutritionEntries(params?: {
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<{ data: NutritionEntry[]; meta: PaginatedMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.from) searchParams.set('from', params.from);
+  if (params?.to) searchParams.set('to', params.to);
+  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+  if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+  const query = searchParams.toString();
+  return api.get<{ data: NutritionEntry[]; meta: PaginatedMeta }>(`/health-data/nutrition${query ? `?${query}` : ''}`);
 }
