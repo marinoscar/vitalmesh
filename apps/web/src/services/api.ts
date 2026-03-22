@@ -205,7 +205,6 @@ import type {
   SleepSession,
   ExerciseSession,
   NutritionEntry,
-  PaginatedMeta,
 } from '../types';
 
 // Allowlist API
@@ -305,7 +304,7 @@ export async function getHealthMetrics(params?: {
   page?: number;
   pageSize?: number;
   sortOrder?: 'asc' | 'desc';
-}): Promise<{ data: HealthMetricRecord[]; meta: PaginatedMeta }> {
+}): Promise<HealthMetricRecord[]> {
   const searchParams = new URLSearchParams();
   if (params?.metric) searchParams.set('metric', params.metric);
   if (params?.from) searchParams.set('from', params.from);
@@ -314,7 +313,7 @@ export async function getHealthMetrics(params?: {
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
   if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
   const query = searchParams.toString();
-  return api.get<{ data: HealthMetricRecord[]; meta: PaginatedMeta }>(`/health-data/metrics${query ? `?${query}` : ''}`);
+  return api.get<HealthMetricRecord[]>(`/health-data/metrics${query ? `?${query}` : ''}`);
 }
 
 export async function getGroupedMetrics(params?: {
@@ -336,7 +335,7 @@ export async function getSleepSessions(params?: {
   page?: number;
   pageSize?: number;
   sortOrder?: 'asc' | 'desc';
-}): Promise<{ data: SleepSession[]; meta: PaginatedMeta }> {
+}): Promise<SleepSession[]> {
   const searchParams = new URLSearchParams();
   if (params?.from) searchParams.set('from', params.from);
   if (params?.to) searchParams.set('to', params.to);
@@ -344,7 +343,7 @@ export async function getSleepSessions(params?: {
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
   if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
   const query = searchParams.toString();
-  return api.get<{ data: SleepSession[]; meta: PaginatedMeta }>(`/health-data/sleep${query ? `?${query}` : ''}`);
+  return api.get<SleepSession[]>(`/health-data/sleep${query ? `?${query}` : ''}`);
 }
 
 export async function getExerciseSessions(params?: {
@@ -353,7 +352,7 @@ export async function getExerciseSessions(params?: {
   page?: number;
   pageSize?: number;
   sortOrder?: 'asc' | 'desc';
-}): Promise<{ data: ExerciseSession[]; meta: PaginatedMeta }> {
+}): Promise<ExerciseSession[]> {
   const searchParams = new URLSearchParams();
   if (params?.from) searchParams.set('from', params.from);
   if (params?.to) searchParams.set('to', params.to);
@@ -361,7 +360,7 @@ export async function getExerciseSessions(params?: {
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
   if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
   const query = searchParams.toString();
-  return api.get<{ data: ExerciseSession[]; meta: PaginatedMeta }>(`/health-data/exercise${query ? `?${query}` : ''}`);
+  return api.get<ExerciseSession[]>(`/health-data/exercise${query ? `?${query}` : ''}`);
 }
 
 export async function getNutritionEntries(params?: {
@@ -370,7 +369,7 @@ export async function getNutritionEntries(params?: {
   page?: number;
   pageSize?: number;
   sortOrder?: 'asc' | 'desc';
-}): Promise<{ data: NutritionEntry[]; meta: PaginatedMeta }> {
+}): Promise<NutritionEntry[]> {
   const searchParams = new URLSearchParams();
   if (params?.from) searchParams.set('from', params.from);
   if (params?.to) searchParams.set('to', params.to);
@@ -378,5 +377,5 @@ export async function getNutritionEntries(params?: {
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
   if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
   const query = searchParams.toString();
-  return api.get<{ data: NutritionEntry[]; meta: PaginatedMeta }>(`/health-data/nutrition${query ? `?${query}` : ''}`);
+  return api.get<NutritionEntry[]>(`/health-data/nutrition${query ? `?${query}` : ''}`);
 }

@@ -74,7 +74,7 @@ export default function HealthDashboardPage() {
 
       // Aggregate steps by day
       const stepsByDay = new Map<string, number>();
-      (stepsResult.data as HealthMetricRecord[]).forEach((r) => {
+      (stepsResult as HealthMetricRecord[]).forEach((r) => {
         const day = r.timestamp.slice(0, 10);
         stepsByDay.set(day, (stepsByDay.get(day) || 0) + r.value);
       });
@@ -84,7 +84,7 @@ export default function HealthDashboardPage() {
 
       // Aggregate HR by day (min/max/avg)
       const hrByDay = new Map<string, number[]>();
-      (hrResult.data as HealthMetricRecord[]).forEach((r) => {
+      (hrResult as HealthMetricRecord[]).forEach((r) => {
         const day = r.timestamp.slice(0, 10);
         if (!hrByDay.has(day)) hrByDay.set(day, []);
         hrByDay.get(day)!.push(r.value);
@@ -111,8 +111,8 @@ export default function HealthDashboardPage() {
         getSleepSessions({ from, to, pageSize: 5 }),
         getExerciseSessions({ from, to, pageSize: 5 }),
       ]);
-      setRecentSleep(sleepResult.data as SleepSession[]);
-      setRecentExercise(exerciseResult.data as ExerciseSession[]);
+      setRecentSleep(sleepResult as SleepSession[]);
+      setRecentExercise(exerciseResult as ExerciseSession[]);
     } catch {
       // Non-critical
     }

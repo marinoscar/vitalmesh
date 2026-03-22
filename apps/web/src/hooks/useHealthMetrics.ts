@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { HealthMetricRecord, SleepSession, ExerciseSession, NutritionEntry, PaginatedMeta } from '../types';
+import type { HealthMetricRecord, SleepSession, ExerciseSession, NutritionEntry } from '../types';
 import { getHealthMetrics, getGroupedMetrics, getSleepSessions, getExerciseSessions, getNutritionEntries } from '../services/api';
 
 type HealthRecord = HealthMetricRecord | SleepSession | ExerciseSession | NutritionEntry;
@@ -14,7 +14,6 @@ interface UseHealthMetricsParams {
 
 interface UseHealthMetricsResult {
   records: HealthRecord[];
-  meta: PaginatedMeta | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -22,7 +21,6 @@ interface UseHealthMetricsResult {
 
 export function useHealthMetrics({ metric, from, to, page = 1, pageSize = 20 }: UseHealthMetricsParams): UseHealthMetricsResult {
   const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [meta, setMeta] = useState<PaginatedMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,26 +30,21 @@ export function useHealthMetrics({ metric, from, to, page = 1, pageSize = 20 }: 
     try {
       if (metric === 'sleep') {
         const result = await getSleepSessions({ from, to, page, pageSize });
-        setRecords(result.data);
-        setMeta(result.meta);
+        setRecords(result);
       } else if (metric === 'exercise') {
         const result = await getExerciseSessions({ from, to, page, pageSize });
-        setRecords(result.data);
-        setMeta(result.meta);
+        setRecords(result);
       } else if (metric === 'nutrition') {
         const result = await getNutritionEntries({ from, to, page, pageSize });
-        setRecords(result.data);
-        setMeta(result.meta);
+        setRecords(result);
       } else if (metric === 'systolic_bp') {
         const result = await getGroupedMetrics({ metric: 'systolic_bp', from, to });
         // Flatten groups into individual records for display
         const flattened = result.groups.flat();
         setRecords(flattened);
-        setMeta(null);
       } else {
         const result = await getHealthMetrics({ metric, from, to, page, pageSize, sortOrder: 'asc' });
-        setRecords(result.data);
-        setMeta(result.meta);
+        setRecords(result);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load health data');
@@ -64,5 +57,5 @@ export function useHealthMetrics({ metric, from, to, page = 1, pageSize = 20 }: 
     fetchRecords();
   }, [fetchRecords]);
 
-  return { records, meta, isLoading, error, refresh: fetchRecords };
+  return { records, isLoading, error, refresh: fetchRecords };
 }
