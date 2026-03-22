@@ -38,6 +38,13 @@ const METRIC_UNITS: Record<string, string> = {
   active_calories: 'kcal',
 };
 
+const SHORT_MONTH = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatDateLabel(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return `${SHORT_MONTH[date.getMonth()]} ${date.getDate()}`;
+}
+
 function formatDuration(ms: number): string {
   const hours = Math.floor(ms / 3600000);
   const minutes = Math.floor((ms % 3600000) / 60000);
@@ -178,12 +185,12 @@ export default function HealthDetailPage() {
           const key = stage.stage.toLowerCase();
           if (key in stageMap) stageMap[key] += dur / 60000; // minutes
         });
-        return { date: new Date(s.startTime).toLocaleDateString(), ...stageMap };
+        return { date: formatDateLabel(s.startTime), ...stageMap };
       });
     }
     if (metric === 'exercise') {
       return (records as ExerciseSession[]).map((s) => ({
-        date: new Date(s.startTime).toLocaleDateString(),
+        date: formatDateLabel(s.startTime),
         value: Math.round((new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 60000),
       }));
     }
@@ -207,7 +214,7 @@ export default function HealthDetailPage() {
       // Aggregate by day
       const byDay = new Map<string, number[]>();
       (records as HealthMetricRecord[]).forEach((r) => {
-        const day = r.timestamp.slice(0, 10);
+        const day = formatDateLabel(r.timestamp);
         if (!byDay.has(day)) byDay.set(day, []);
         byDay.get(day)!.push(r.value);
       });
@@ -231,9 +238,9 @@ export default function HealthDetailPage() {
           const dayOfWeek = day.getDay();
           const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
           day.setDate(day.getDate() + diff);
-          key = `Wk ${(day.getMonth() + 1)}/${day.getDate()}`;
+          key = formatDateLabel(day);
         } else {
-          key = r.timestamp.slice(0, 10);
+          key = formatDateLabel(r.timestamp);
         }
         bucket.set(key, (bucket.get(key) || 0) + r.value);
       });
@@ -241,7 +248,7 @@ export default function HealthDetailPage() {
     }
     // Line chart metrics (weight, etc.)
     return (records as HealthMetricRecord[]).map((r) => ({
-      date: new Date(r.timestamp).toLocaleDateString(),
+      date: formatDateLabel(r.timestamp),
       value: r.value,
     }));
   }, [records, metric, selection]);

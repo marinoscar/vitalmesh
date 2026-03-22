@@ -28,6 +28,14 @@ import { getHealthMetrics, getSleepSessions, getExerciseSessions } from '../serv
 
 const MetricChart = lazy(() => import('../components/health/MetricChart'));
 
+const SHORT_MONTH = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/** Format an ISO date string or Date as "Jan 19" */
+function formatDateLabel(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return `${SHORT_MONTH[date.getMonth()]} ${date.getDate()}`;
+}
+
 function formatDuration(ms: number): string {
   const hours = Math.floor(ms / 3600000);
   const minutes = Math.floor((ms % 3600000) / 60000);
@@ -102,9 +110,9 @@ export default function HealthDashboardPage() {
           const dayOfWeek = day.getDay();
           const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
           day.setDate(day.getDate() + diff);
-          key = `Wk ${(day.getMonth() + 1)}/${day.getDate()}`;
+          key = formatDateLabel(day);
         } else {
-          key = r.timestamp.slice(0, 10);
+          key = formatDateLabel(r.timestamp);
         }
         stepsBucket.set(key, (stepsBucket.get(key) || 0) + r.value);
       });
@@ -115,7 +123,7 @@ export default function HealthDashboardPage() {
       // Aggregate HR by day (min/max/avg)
       const hrByDay = new Map<string, number[]>();
       (hrResult as HealthMetricRecord[]).forEach((r) => {
-        const day = r.timestamp.slice(0, 10);
+        const day = formatDateLabel(r.timestamp);
         if (!hrByDay.has(day)) hrByDay.set(day, []);
         hrByDay.get(day)!.push(r.value);
       });
