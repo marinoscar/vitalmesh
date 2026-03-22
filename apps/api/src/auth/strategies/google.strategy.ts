@@ -30,6 +30,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret: configService.get<string>('google.clientSecret') || '',
       callbackURL: configService.get<string>('google.callbackUrl') || '',
       scope: ['email', 'profile'],
+      authorizationURL: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenURL: 'https://oauth2.googleapis.com/token',
+      userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo',
     });
   }
 
