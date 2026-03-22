@@ -11,6 +11,7 @@ import com.vitalmesh.app.data.local.db.dao.SyncQueueDao
 import com.vitalmesh.app.data.local.db.dao.SyncStateLocalDao
 import com.vitalmesh.app.data.local.db.entity.CachedDailySummary
 import com.vitalmesh.app.data.local.db.entity.SyncHistoryEntry
+import com.vitalmesh.app.data.local.db.entity.SyncQueueEntry
 import com.vitalmesh.app.data.local.db.entity.SyncStateLocal
 import com.vitalmesh.app.data.local.logging.AppLogger
 import com.vitalmesh.app.data.local.preferences.SyncPreferences
