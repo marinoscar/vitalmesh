@@ -267,7 +267,7 @@ export default function HealthDashboardPage() {
                       data={stepsData}
                       config={{
                         type: 'bar',
-                        lines: [{ dataKey: 'value', name: 'Steps', color: '#4caf50' }],
+                        lines: [{ dataKey: 'value', name: 'Steps' }],
                       }}
                     />
                   </Suspense>
@@ -294,9 +294,9 @@ export default function HealthDashboardPage() {
                       config={{
                         type: 'line',
                         lines: [
-                          { dataKey: 'min', name: 'Min', color: '#ef9a9a' },
-                          { dataKey: 'avg', name: 'Avg', color: '#f44336' },
-                          { dataKey: 'max', name: 'Max', color: '#ef9a9a' },
+                          { dataKey: 'min', name: 'Min' },
+                          { dataKey: 'avg', name: 'Avg' },
+                          { dataKey: 'max', name: 'Max' },
                         ],
                       }}
                     />

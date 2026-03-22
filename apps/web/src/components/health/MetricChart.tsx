@@ -1,12 +1,11 @@
 import React from 'react';
-import { useTheme } from '@mui/material/styles';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { LineChart } from '@mui/x-charts/LineChart';
 
 interface LineConfig {
   dataKey: string;
   name: string;
-  color: string;
+  color?: string;
 }
 
 interface ChartConfig {
@@ -20,10 +19,8 @@ interface MetricChartProps {
 }
 
 const MetricChart = React.memo(function MetricChart({ data, config }: MetricChartProps) {
-  const theme = useTheme();
-
   const lines = config.lines || [
-    { dataKey: 'value', name: 'Value', color: theme.palette.primary.main },
+    { dataKey: 'value', name: 'Value' },
   ];
 
   const xLabels = data.map((d) => (d.date as string) || '');
@@ -32,7 +29,6 @@ const MetricChart = React.memo(function MetricChart({ data, config }: MetricChar
     const series = lines.map((line) => ({
       data: data.map((d) => (d[line.dataKey] as number) ?? 0),
       label: line.name,
-      color: line.color,
       stack: config.type === 'stacked-bar' ? 'stack' : undefined,
     }));
 
@@ -51,7 +47,6 @@ const MetricChart = React.memo(function MetricChart({ data, config }: MetricChar
   const series = lines.map((line) => ({
     data: data.map((d) => (d[line.dataKey] as number) ?? null),
     label: line.name,
-    color: line.color,
     showMark: false,
   }));
 

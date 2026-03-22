@@ -62,42 +62,42 @@ function getDateRange(range: DateRange): { from: string; to: string } {
 function getChartConfig(metric: string) {
   switch (metric) {
     case 'steps':
-      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Steps', color: '#4caf50' }] };
+      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Steps' }] };
     case 'heart_rate':
       return {
         type: 'line' as const,
         lines: [
-          { dataKey: 'min', name: 'Min', color: '#ef9a9a' },
-          { dataKey: 'avg', name: 'Avg', color: '#f44336' },
-          { dataKey: 'max', name: 'Max', color: '#ef9a9a' },
+          { dataKey: 'min', name: 'Min' },
+          { dataKey: 'avg', name: 'Avg' },
+          { dataKey: 'max', name: 'Max' },
         ],
       };
     case 'sleep':
       return {
         type: 'stacked-bar' as const,
         lines: [
-          { dataKey: 'deep', name: 'Deep', color: '#1a237e' },
-          { dataKey: 'light', name: 'Light', color: '#7986cb' },
-          { dataKey: 'rem', name: 'REM', color: '#9c27b0' },
-          { dataKey: 'awake', name: 'Awake', color: '#ffab91' },
+          { dataKey: 'deep', name: 'Deep' },
+          { dataKey: 'light', name: 'Light' },
+          { dataKey: 'rem', name: 'REM' },
+          { dataKey: 'awake', name: 'Awake' },
         ],
       };
     case 'weight':
-      return { type: 'line' as const, lines: [{ dataKey: 'value', name: 'Weight', color: '#ff9800' }] };
+      return { type: 'line' as const, lines: [{ dataKey: 'value', name: 'Weight' }] };
     case 'systolic_bp':
       return {
         type: 'line' as const,
         lines: [
-          { dataKey: 'systolic', name: 'Systolic', color: '#f44336' },
-          { dataKey: 'diastolic', name: 'Diastolic', color: '#2196f3' },
+          { dataKey: 'systolic', name: 'Systolic' },
+          { dataKey: 'diastolic', name: 'Diastolic' },
         ],
       };
     case 'active_calories':
-      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Calories', color: '#ff5722' }] };
+      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Calories' }] };
     case 'exercise':
-      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Duration (min)', color: '#2196f3' }] };
+      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Duration (min)' }] };
     default:
-      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Value', color: '#1976d2' }] };
+      return { type: 'bar' as const, lines: [{ dataKey: 'value', name: 'Value' }] };
   }
 }
 
