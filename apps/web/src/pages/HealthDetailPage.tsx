@@ -105,7 +105,7 @@ export default function HealthDetailPage() {
   const { metric = 'steps' } = useParams<{ metric: string }>();
   const navigate = useNavigate();
   const [range, setRange] = useState<DateRange>('week');
-  const { from, to } = getDateRange(range);
+  const { from, to } = useMemo(() => getDateRange(range), [range]);
 
   const { records, isLoading, error, refresh } = useHealthMetrics({
     metric,
