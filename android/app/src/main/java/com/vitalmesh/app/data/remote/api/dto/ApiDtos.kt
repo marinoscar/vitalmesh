@@ -251,7 +251,7 @@ data class PaginationMeta(
 
 // Query response DTOs
 @JsonClass(generateAdapter = true)
-data class HealthMetricRecord(
+data class MetricQueryRecord(
     val id: String,
     val timestamp: String,
     val endTime: String? = null,
@@ -328,5 +328,5 @@ data class HealthCycleRecord(
 
 @JsonClass(generateAdapter = true)
 data class GroupedMetricsResponse(
-    val groups: List<List<HealthMetricRecord>>,
+    val groups: List<List<MetricQueryRecord>>,
 )

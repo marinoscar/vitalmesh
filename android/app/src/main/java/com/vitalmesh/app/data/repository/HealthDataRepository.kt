@@ -119,7 +119,7 @@ class HealthDataRepository @Inject constructor(
     suspend fun queryMetrics(
         metric: String? = null, from: String? = null, to: String? = null,
         page: Int = 1, pageSize: Int = 50,
-    ): Result<List<HealthMetricRecord>> {
+    ): Result<List<MetricQueryRecord>> {
         return try {
             val response = healthDataApi.queryMetrics(metric, from, to, page, pageSize)
             if (response.isSuccessful && response.body() != null) {

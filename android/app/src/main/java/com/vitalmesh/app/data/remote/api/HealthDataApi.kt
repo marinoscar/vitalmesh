@@ -41,7 +41,7 @@ interface HealthDataApi {
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 20,
         @Query("sortOrder") sortOrder: String = "desc",
-    ): Response<PaginatedResponse<List<HealthMetricRecord>>>
+    ): Response<PaginatedResponse<List<MetricQueryRecord>>>
 
     @GET("health-data/metrics/grouped")
     suspend fun queryGroupedMetrics(
